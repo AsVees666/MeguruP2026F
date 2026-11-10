@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 587.96 773.13">
+  <defs>
+    <style>
+      .cls-1, .cls-2 {
+        fill: none;
+      }
+
+      .cls-3 {
+        fill: #fff;
+      }
+
+      .cls-3, .cls-4 {
+        font-size: 25px;
+      }
+
+      .cls-3, .cls-4, .cls-5 {
+        font-family: ZenMaruGothic-Medium, 'Zen Maru Gothic';
+        font-weight: 500;
+      }
+
+      .cls-6 {
+        fill: #eb8885;
+      }
+
+      .cls-6, .cls-7, .cls-8 {
+        font-family: CezanneProN-M-83pv-RKSJ-H, 'FOT-Cezanne ProN';
+        font-size: 16.41px;
+      }
+
+      .cls-4, .cls-9, .cls-5, .cls-7 {
+        fill: #8b6f55;
+      }
+
+      .cls-10 {
+        letter-spacing: .25em;
+      }
+
+      .cls-11 {
+        fill: #adc885;
+      }
+
+      .cls-5 {
+        font-size: 30px;
+      }
+
+      .cls-2 {
+        stroke: #fff;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .cls-12 {
+        letter-spacing: -.02em;
+      }
+
+      .cls-13 {
+        letter-spacing: -.01em;
+      }
+
+      .cls-8 {
+        fill: #036eb6;
+      }
+    </style>
+  </defs>
+  <g id="_月選択ボタン" data-name="月選択ボタン">
+    <rect class="cls-9" x="470.68" y="0" width="117.28" height="31.29" rx="15.64" ry="15.64"/>
+    <text class="cls-3" transform="translate(488.07 23.9)"><tspan x="0" y="0">2026.11</tspan></text>
+    <polyline class="cls-2" points="565.55 15 570.39 19.83 575.23 15"/>
+  </g>
+  <g id="_文字日記マーク" data-name="文字日記マーク">
+    <path class="cls-11" d="M50.78,200.09c.23,6.76-6.93,9.14-11.63,8.01-.23-.07-.46-.16-.68-.24-3.35-1.32-5.67-4.17-5.67-7.48,0-3.94,3.29-7.24,7.7-8.06.23-.04.47-.08.71-.11,6.22-.86,10.99.33,9.72,7.26-.03.21-.09.42-.16.62Z"/>
+  </g>
+  <g id="_日にち文字位置" data-name="日にち文字位置">
+    <rect class="cls-1" x="33.34" y="191.48" width="17.32" height="17.32"/>
+  </g>
+  <g id="_曜日文字_固定_" data-name="曜日文字(固定)">
+    <text class="cls-6" transform="translate(27.4 172.81)"><tspan x="0" y="0">Sun</tspan></text>
+    <text class="cls-7" transform="translate(110.16 172.81)"><tspan x="0" y="0">Mon</tspan></text>
+    <text class="cls-7" transform="translate(195.62 172.81)"><tspan class="cls-12" x="0" y="0">T</tspan><tspan x="8.58" y="0">ue</tspan></text>
+    <text class="cls-7" transform="translate(277.69 172.81)"><tspan class="cls-13" x="0" y="0">W</tspan><tspan x="14.73" y="0">ed</tspan></text>
+    <text class="cls-7" transform="translate(363.63 172.81)"><tspan x="0" y="0">Thu</tspan></text>
+    <text class="cls-7" transform="translate(450.96 172.81)"><tspan x="0" y="0">Fri</tspan></text>
+    <text class="cls-8" transform="translate(534.08 172.81)"><tspan x="0" y="0">Sat</tspan></text>
+  </g>
+  <g id="_カレンダー枠ガイド" data-name="カレンダー枠ガイド">
+    <rect class="cls-1" y="183.37" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="83.99" y="183.37" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="167.99" y="183.37" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="251.98" y="183.37" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="335.98" y="183.37" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="419.97" y="183.37" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="503.97" y="183.37" width="83.99" height="98.29"/>
+    <rect class="cls-1" y="281.67" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="83.99" y="281.67" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="167.99" y="281.67" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="251.98" y="281.67" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="335.98" y="281.67" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="419.97" y="281.67" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="503.97" y="281.67" width="83.99" height="98.29"/>
+    <rect class="cls-1" y="379.96" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="83.99" y="379.96" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="167.99" y="379.96" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="251.98" y="379.96" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="335.98" y="379.96" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="419.97" y="379.96" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="503.97" y="379.96" width="83.99" height="98.29"/>
+    <rect class="cls-1" y="478.25" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="83.99" y="478.25" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="167.99" y="478.25" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="251.98" y="478.25" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="335.98" y="478.25" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="419.97" y="478.25" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="503.97" y="478.25" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="0" y="576.55" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="83.99" y="576.55" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="167.99" y="576.55" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="251.98" y="576.55" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="335.98" y="576.55" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="419.97" y="576.55" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="503.97" y="576.55" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="0" y="674.84" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="83.99" y="674.84" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="167.99" y="674.84" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="251.98" y="674.84" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="335.98" y="674.84" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="419.97" y="674.84" width="83.99" height="98.29"/>
+    <rect class="cls-1" x="503.97" y="674.84" width="83.99" height="98.29"/>
+  </g>
+  <g id="_マーク位置" data-name="マーク位置">
+    <rect class="cls-1" x="15.72" y="220.65" width="52.55" height="52.55"/>
+  </g>
+  <g id="_年表示" data-name="年表示">
+    <text class="cls-5" transform="translate(246.85 27.04)"><tspan x="0" y="0">202</tspan><tspan class="cls-10" x="41.91" y="0">6</tspan><tspan x="64.26" y="0">年</tspan></text>
+  </g>
+  <g id="_月表示" data-name="月表示">
+    <text class="cls-4" transform="translate(268.41 109.39)"><tspan x="0" y="0">1</tspan><tspan class="cls-10" x="9.95" y="0">1</tspan><tspan x="26.15" y="0">月</tspan></text>
+  </g>
+</svg>
