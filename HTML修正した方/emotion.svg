@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450.35 1113.46">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: none;
+      }
+
+      .cls-2 {
+        fill: #f4d581;
+      }
+
+      .cls-3 {
+        font-size: 20px;
+      }
+
+      .cls-3, .cls-4 {
+        font-family: ZenMaruGothic-Regular, 'Zen Maru Gothic';
+      }
+
+      .cls-3, .cls-5 {
+        fill: #8b6f55;
+      }
+
+      .cls-6 {
+        fill: #fff4c7;
+      }
+
+      .cls-4 {
+        fill: #fff;
+        font-size: 25px;
+      }
+
+      .cls-7 {
+        fill: #bed7d8;
+      }
+
+      .cls-8 {
+        fill: #f05a24;
+      }
+
+      .cls-9 {
+        fill: #9db3b9;
+        opacity: .62;
+      }
+
+      .cls-10 {
+        fill: #eb8885;
+      }
+
+      .cls-11 {
+        fill: #f2a485;
+        opacity: .5;
+      }
+
+      .cls-12 {
+        fill: #f3c8b8;
+      }
+    </style>
+  </defs>
+  <g id="_イライラバー" data-name="イライラバー">
+    <rect class="cls-11" x="372.55" y="509.14" width="77.79" height="277.43" rx="38.89" ry="38.89"/>
+  </g>
+  <g id="_しょんぼりバー" data-name="しょんぼりバー">
+    <rect class="cls-7" x="248.73" y="509.14" width="77.79" height="277.43" rx="38.89" ry="38.89"/>
+  </g>
+  <g id="_ワクワクバー" data-name="ワクワクバー">
+    <rect class="cls-12" x="124.81" y="509.14" width="77.79" height="277.43" rx="38.89" ry="38.89"/>
+  </g>
+  <g id="_キラキラバー" data-name="キラキラバー">
+    <rect class="cls-6" x=".87" y="509.14" width="77.79" height="277.43" rx="38.89" ry="38.89"/>
+  </g>
+  <g id="_イライラつまみ" data-name="イライラつまみ">
+    <rect class="cls-8" x="372.53" y="624.14" width="77.82" height="162.44" rx="38.91" ry="38.91"/>
+  </g>
+  <g id="_しょんぼりつまみ" data-name="しょんぼりつまみ">
+    <rect class="cls-9" x="248.49" y="575.03" width="77.82" height="211.83" rx="38.91" ry="38.91"/>
+  </g>
+  <g id="_ワクワクつまみ" data-name="ワクワクつまみ">
+    <rect class="cls-10" x="124.79" y="678.19" width="77.82" height="108.67" rx="38.91" ry="38.91"/>
+  </g>
+  <g id="_キラキラつまみ" data-name="キラキラつまみ">
+    <rect class="cls-2" x=".85" y="699.2" width="77.82" height="87.38" rx="38.91" ry="38.91"/>
+  </g>
+  <g id="_文字" data-name="文字">
+    <text class="cls-3" transform="translate(0 834.85)"><tspan x="0" y="0">キラキラ</tspan></text>
+    <text class="cls-3" transform="translate(124.04 834.85)"><tspan x="0" y="0">ワクワク</tspan></text>
+    <text class="cls-3" transform="translate(241.12 834.85)"><tspan x="0" y="0">しょんぼり</tspan></text>
+    <text class="cls-3" transform="translate(365.54 834.85)"><tspan x="0" y="0">イライラ</tspan></text>
+  </g>
+  <g id="_日記記録ボタン" data-name="日記記録ボタン">
+    <rect class="cls-5" x="1.04" y="954.16" width="449.07" height="63.41" rx="31.7" ry="31.7"/>
+    <text class="cls-4" transform="translate(150.57 996.33)"><tspan x="0" y="0">＋日記を書く</tspan></text>
+  </g>
+  <g id="_記録を終えるボタン" data-name="記録を終えるボタン">
+    <rect class="cls-5" x="1.04" y="1050.05" width="449.07" height="63.41" rx="31.7" ry="31.7"/>
+    <text class="cls-4" transform="translate(150.5703 1092.2196)"><tspan x="0" y="0">記録を終える</tspan></text>
+  </g>
+  <g id="_マーク位置" data-name="マーク位置">
+    <rect class="cls-1" x="77.39" width="302.46" height="302.46"/>
+  </g>
+</svg>
