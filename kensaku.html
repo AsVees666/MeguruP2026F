@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>日記を探す｜めぐる</title>
+
+  <!-- Supabase JavaScript SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- 共通メニュー -->
+  <link rel="stylesheet" href="menu.css">
+  <script src="menu.js" defer></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --brown: #8b6f55;
+      --light-brown: #d8c3a5;
+      --cream: #f4eee5;
+      --text: #5f5145;
+      --white: #fff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--cream);
+      color: var(--text);
+      font-family: "Zen Maru Gothic", sans-serif;
+    }
+
+    body {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      font-weight: 400;
+      font-synthesis: none;
+    }
+
+    button, input {
+      font: inherit;
+    }
+
+    /* mypage.html / index.html と共通の画面全体レイアウト */
+    #app {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+      max-width: 600px;
+      margin: 0 auto;
+      position: relative;
+      overflow: hidden;
+      background: var(--cream);
+    }
+
+    /* 検索エリア・一覧はスクロール可能にする */
+    main {
+      flex: 1;
+      min-height: 0;
+      width: 100%;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: calc(56px + env(safe-area-inset-top, 0px)) 24px 28px;
+    }
+
+    .page-title {
+      margin: 0 0 8px;
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--brown);
+    }
+
+    .page-description {
+      margin: 0 0 22px;
+      font-size: 13px;
+      color: #978575;
+      line-height: 1.8;
+    }
+
+    .search-area {
+      display: flex;
+      gap: 9px;
+      margin-bottom: 26px;
+    }
+
+    .search-input {
+      min-width: 0;
+      flex: 1;
+      height: 48px;
+      padding: 0 16px;
+      border: 1.5px solid var(--light-brown);
+      border-radius: 12px;
+      outline: none;
+      background: white;
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    .search-input:focus {
+      border-color: var(--brown);
+    }
+
+    .search-input::placeholder {
+      color: #b9aa9b;
+    }
+
+    .search-button {
+      width: 84px;
+      flex-shrink: 0;
+      border: none;
+      border-radius: 12px;
+      background: var(--brown);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .search-button:disabled,
+    .more-button:disabled {
+      opacity: .55;
+      cursor: default;
+    }
+
+    .result-heading {
+      margin: 0 0 14px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--brown);
+    }
+
+    .result-count {
+      margin-left: 7px;
+      font-size: 12px;
+      color: #a18e7b;
+      font-weight: 400;
+    }
+
+    .result-list {
+      display: flex;
+      flex-direction: column;
+      gap: 13px;
+    }
+
+    .diary-card {
+      width: 100%;
+      padding: 17px 19px;
+      border: 1px solid #e4d6c5;
+      border-radius: 15px;
+      background: white;
+      text-align: left;
+      color: var(--text);
+      cursor: pointer;
+      transition: border-color .2s, transform .2s;
+    }
+
+    .diary-card:hover {
+      border-color: var(--brown);
+      transform: translateY(-1px);
+    }
+
+    .diary-date {
+      display: block;
+      margin-bottom: 9px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--brown);
+    }
+
+    .diary-excerpt {
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+      line-clamp: 3;
+      font-size: 14px;
+      line-height: 1.9;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .diary-emotion {
+      display: inline-block;
+      margin-top: 13px;
+      padding: 4px 11px;
+      border-radius: 20px;
+      background: var(--cream);
+      color: #927b63;
+      font-size: 11px;
+    }
+
+    .message {
+      padding: 35px 15px;
+      text-align: center;
+      color: #a18e7b;
+      font-size: 13px;
+      line-height: 1.9;
+    }
+
+    .more-area {
+      margin-top: 25px;
+      text-align: center;
+    }
+
+    .more-button {
+      padding: 11px 30px;
+      border: 1px solid var(--light-brown);
+      border-radius: 25px;
+      background: white;
+      color: var(--brown);
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .more-button:hover {
+      background: var(--cream);
+    }
+
+    /* mypage.html / index.html と同じフッター設定 */
+    footer {
+      height: 80px;
+      padding: 0 32px calc(12px + env(safe-area-inset-bottom, 0px));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      background: var(--cream);
+      z-index: 10;
+    }
+
+    .footer-svg {
+      width: 100%;
+      height: 50px;
+    }
+
+    svg [role="button"] {
+      cursor: pointer;
+    }
+
+    #_ホーム, #_カレンダー, #_マイページ, #_検索 {
+      cursor: pointer;
+      pointer-events: all;
+    }
+
+    /* 日記全文ダイアログ */
+    .dialog-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      padding: 20px;
+      background: rgba(65, 52, 40, .38);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .dialog-overlay.show {
+      display: flex;
+    }
+
+    .dialog {
+      width: min(100%, 460px);
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 25px 23px;
+      border: 1.5px solid var(--light-brown);
+      border-radius: 18px;
+      background: #fbf8f2;
+      box-shadow: 0 8px 30px rgba(70, 50, 30, .15);
+    }
+
+    .dialog-date {
+      margin: 0 0 10px;
+      color: var(--brown);
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .dialog-emotion {
+      display: inline-block;
+      margin-bottom: 17px;
+      padding: 5px 13px;
+      border-radius: 20px;
+      background: #efe6d8;
+      color: #927b63;
+      font-size: 12px;
+    }
+
+    .dialog-content {
+      margin: 0;
+      padding: 18px 0;
+      border-top: 1px solid #eadfd2;
+      color: var(--text);
+      font-size: 14px;
+      line-height: 2;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .close-button {
+      display: block;
+      min-width: 112px;
+      margin: 20px auto 0;
+      padding: 10px 25px;
+      border: 1px solid #9b8064;
+      border-radius: 7px;
+      background: #9b8064;
+      color: white;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    @media (max-width: 480px) {
+      main {
+        padding: calc(52px + env(safe-area-inset-top, 0px)) 18px 24px;
+      }
+
+      .page-title {
+        font-size: 22px;
+      }
+
+      .dialog {
+        padding: 22px 18px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <main aria-label="日記を探す">
+      <h1 class="page-title">日記を探す</h1>
+      <p class="page-description">
+        これまでに書いた日記を、言葉から探すことができます。
+      </p>
+
+      <div class="search-area">
+        <input
+          id="searchInput"
+          class="search-input"
+          type="search"
+          placeholder="日記の言葉を入力"
+          autocomplete="off"
+        >
+        <button id="searchButton" class="search-button" disabled>検索</button>
+      </div>
+
+      <h2 class="result-heading" id="resultHeading" hidden>
+        検索結果
+        <span class="result-count" id="resultCount"></span>
+      </h2>
+
+      <div id="resultList" class="result-list">
+        <div class="message">
+          探したい言葉を入力して、検索してください。
+        </div>
+      </div>
+
+      <div class="more-area" id="moreArea" hidden>
+        <button id="moreButton" class="more-button">もっと見る</button>
+      </div>
+    </main>
+
+    <footer>
+      <svg class="footer-svg" viewBox="60 1460 630 80" xmlns="http://www.w3.org/2000/svg">
+        <g id="_カレンダー" data-name="カレンダー" role="button" aria-label="カレンダー">
+          <path stroke="#8b6f55" stroke-width="3" stroke-miterlimit="10" fill="none" d="M82.77,1483.38h58.44v36.73c0,3.87-3.14,7.02-7.02,7.02h-44.4c-3.87,0-7.02-3.14-7.02-7.02v-36.73h0Z"/>
+          <path stroke="#8b6f55" stroke-width="3" stroke-miterlimit="10" fill="#8b6f55" d="M85.41,1477.07h53.16c1.46,0,2.64,1.18,2.64,2.64v2.91h-58.44v-2.91c0-1.46,1.18-2.64,2.64-2.64Z"/>
+          <rect stroke="#8b6f55" stroke-miterlimit="10" fill="none" x="89.13" y="1469.38" width="4.46" height="11.2" rx="1.89" ry="1.89"/>
+          <rect stroke="#8b6f55" stroke-miterlimit="10" fill="none" x="102.88" y="1469.38" width="4.46" height="11.2" rx="1.89" ry="1.89"/>
+          <rect stroke="#8b6f55" stroke-miterlimit="10" fill="none" x="130.39" y="1469.38" width="4.46" height="11.2" rx="1.89" ry="1.89"/>
+          <rect stroke="#8b6f55" stroke-miterlimit="10" fill="none" x="116.64" y="1469.38" width="4.46" height="11.2" rx="1.89" ry="1.89"/>
+          <rect fill="#8b6f55" x="91.16" y="1488.57" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+          <rect fill="#8b6f55" x="102.53" y="1488.57" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+          <rect fill="#8b6f55" x="113.91" y="1488.57" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+          <rect fill="#8b6f55" x="125.29" y="1488.57" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+          <rect fill="#8b6f55" x="91.16" y="1501.5" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+          <rect fill="#8b6f55" x="102.53" y="1501.5" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+          <rect fill="#8b6f55" x="113.91" y="1501.5" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+          <rect fill="#8b6f55" x="125.29" y="1501.5" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+          <rect fill="#8b6f55" x="91.16" y="1514.42" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+          <rect fill="#8b6f55" x="102.53" y="1514.42" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+          <rect fill="#8b6f55" x="113.91" y="1514.42" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+          <rect fill="#8b6f55" x="125.29" y="1514.42" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+        </g>
+        <g id="_検索" data-name="検索" role="button" aria-label="検索">
+          <path stroke="#8b6f55" stroke-width="3" stroke-miterlimit="10" fill="none" d="M303.59,1490.25c0,4.52-1.44,8.71-3.88,12.12-1.35,1.89-2.99,3.54-4.88,4.88-3.41,2.43-7.59,3.88-12.11,3.88-11.53,0-20.87-9.35-20.87-20.88s9.34-20.87,20.87-20.87,20.87,9.35,20.87,20.87Z"/>
+          <path fill="#8b6f55" d="M318.7,1525.61l-.62.64c-1.17,1.17-3.09,1.17-4.26,0l-18.99-18.99c1.89-1.35,3.54-2.99,4.88-4.88l18.99,18.99c1.17,1.17,1.17,3.07,0,4.24Z"/>
+        </g>
+        <g id="_ホーム" data-name="ホーム" role="button" aria-label="ホーム">
+          <path fill="#8b6f55" d="M494,1503.55h-11.27v23.57h-13.05v-12.97c0-3.12-2.53-5.65-5.65-5.65s-5.65,2.53-5.65,5.65v12.97h-13.05v-23.57h-11.27c-1.86,0-2.8-2.26-1.48-3.58l29.97-29.97c.82-.82,2.15-.82,2.97,0l29.97,29.97c1.32,1.32.39,3.58-1.48,3.58Z"/>
+        </g>
+        <g id="_マイページ" data-name="マイページ" role="button" aria-label="マイページ">
+          <circle fill="#8b6f55" cx="645.96" cy="1483.66" r="14.28"/>
+          <path fill="#8b6f55" d="M667.23,1527.13h-42.54c0-14.48,9.52-26.21,21.26-26.21s21.28,11.73,21.28,26.21Z"/>
+        </g>
+      </svg>
+    </footer>
+  </div>
+
+  <!-- 日記全文ダイアログ -->
+  <div class="dialog-overlay" id="detailDialog">
+    <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogDate">
+      <h2 class="dialog-date" id="dialogDate"></h2>
+      <span class="dialog-emotion" id="dialogEmotion"></span>
+      <p class="dialog-content" id="dialogContent"></p>
+      <button class="close-button" id="closeDialog">閉じる</button>
+    </section>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://vhzxwnyxgmtgteatgwcj.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_zFptSnTXIBaVQFCeYairJQ_WAx6ZL1L";
+
+    const supabaseClient = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_KEY
+    );
+
+    const PAGE_URLS = {
+      home: "index.html",
+      calendar: "calendar.html",
+      mypage: "mypage.html",
+      search: "kensaku.html"
+    };
+
+    const PAGE_SIZE = 20;
+
+    const EMOTION_NAMES = {
+      hokkori: "ほっこり",
+      massara: "まっさら",
+      ukiuki: "うきうき",
+      meramera: "めらめら",
+      sowasowa: "そわそわ",
+      punpun: "ぷんぷん",
+      moyamoya: "もやもや",
+      shinmiri: "しんみり",
+      gakkuri: "がっくり",
+      hetahhe: "へとへと"
+    };
+
+    const searchInput = document.getElementById("searchInput");
+    const searchButton = document.getElementById("searchButton");
+    const resultList = document.getElementById("resultList");
+    const resultHeading = document.getElementById("resultHeading");
+    const resultCount = document.getElementById("resultCount");
+    const moreArea = document.getElementById("moreArea");
+    const moreButton = document.getElementById("moreButton");
+
+    const detailDialog = document.getElementById("detailDialog");
+    const dialogDate = document.getElementById("dialogDate");
+    const dialogEmotion = document.getElementById("dialogEmotion");
+    const dialogContent = document.getElementById("dialogContent");
+
+    let currentUser = null;
+    let currentKeyword = "";
+    let currentOffset = 0;
+    let totalCount = 0;
+    let isSearching = false;
+
+    function addClick(id, label, callback) {
+      const element = document.getElementById(id);
+      if (!element) return;
+      element.setAttribute("role", "button");
+      element.setAttribute("tabindex", "0");
+      element.setAttribute("aria-label", label);
+      element.addEventListener("click", callback);
+      element.addEventListener("keydown", event => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          callback();
+        }
+      });
+    }
+
+    // フッターナビゲーション（mypage.html / index.html と共通）
+    addClick("_ホーム", "ホーム", () => window.location.href = PAGE_URLS.home);
+    addClick("_カレンダー", "カレンダー", () => window.location.href = PAGE_URLS.calendar);
+    addClick("_検索", "検索", () => window.location.href = PAGE_URLS.search);
+    addClick("_マイページ", "マイページ", () => window.location.href = PAGE_URLS.mypage);
+
+    function formatDate(dateString) {
+      if (!dateString) return "";
+      const [year, month, day] = dateString.split("-");
+      return `${year}年${Number(month)}月${Number(day)}日`;
+    }
+
+    function showMessage(message) {
+      resultList.innerHTML = "";
+      const div = document.createElement("div");
+      div.className = "message";
+      div.textContent = message;
+      resultList.appendChild(div);
+    }
+
+    function createDiaryCard(diary) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "diary-card";
+
+      const date = document.createElement("span");
+      date.className = "diary-date";
+      date.textContent = formatDate(diary.entry_date);
+
+      const excerpt = document.createElement("span");
+      excerpt.className = "diary-excerpt";
+      excerpt.textContent = diary.content || "";
+
+      button.append(date, excerpt);
+
+      if (diary.emotion_id) {
+        const emotion = document.createElement("span");
+        emotion.className = "diary-emotion";
+        emotion.textContent =
+          EMOTION_NAMES[diary.emotion_id] || "感情の記録";
+        button.appendChild(emotion);
+      }
+
+      button.addEventListener("click", () => {
+        openDiary(diary);
+      });
+
+      return button;
+    }
+
+    function openDiary(diary) {
+      dialogDate.textContent = formatDate(diary.entry_date);
+      dialogContent.textContent = diary.content || "";
+
+      if (diary.emotion_id) {
+        dialogEmotion.textContent =
+          EMOTION_NAMES[diary.emotion_id] || "感情の記録";
+        dialogEmotion.style.display = "inline-block";
+      } else {
+        dialogEmotion.style.display = "none";
+      }
+
+      detailDialog.classList.add("show");
+    }
+
+    function closeDiary() {
+      detailDialog.classList.remove("show");
+    }
+
+    document.getElementById("closeDialog").addEventListener("click", closeDiary);
+
+    detailDialog.addEventListener("click", (event) => {
+      if (event.target === detailDialog) {
+        closeDiary();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        closeDiary();
+      }
+    });
+
+    async function searchDiaries(isNewSearch = true) {
+      if (!currentUser || isSearching) return;
+
+      if (isNewSearch) {
+        currentKeyword = searchInput.value.trim();
+        currentOffset = 0;
+        totalCount = 0;
+        resultList.innerHTML = "";
+      }
+
+      if (!currentKeyword) {
+        resultHeading.hidden = true;
+        moreArea.hidden = true;
+        showMessage("探したい言葉を入力してください。");
+        return;
+      }
+
+      isSearching = true;
+      searchButton.disabled = true;
+      moreButton.disabled = true;
+
+      if (isNewSearch) {
+        showMessage("日記を探しています…");
+      }
+
+      try {
+        const safeKeyword = currentKeyword.replace(/[%_]/g, "");
+
+        if (!safeKeyword) {
+          resultHeading.hidden = true;
+          moreArea.hidden = true;
+          showMessage("検索できる文字を入力してください。");
+          return;
+        }
+
+        const { data, error, count } = await supabaseClient
+          .from("diaries")
+          .select("entry_date, emotion_id, content", { count: "exact" })
+          .eq("user_id", currentUser.id)
+          .not("content", "is", null)
+          .ilike("content", `%${safeKeyword}%`)
+          .order("entry_date", { ascending: false })
+          .range(currentOffset, currentOffset + PAGE_SIZE - 1);
+
+        if (error) throw error;
+
+        totalCount = count || 0;
+
+        if (isNewSearch) {
+          resultList.innerHTML = "";
+        }
+
+        if (!data || data.length === 0) {
+          if (isNewSearch) {
+            showMessage("該当する日記は見つかりませんでした。");
+          }
+        } else {
+          data.forEach((diary) => {
+            resultList.appendChild(createDiaryCard(diary));
+          });
+        }
+
+        resultHeading.hidden = false;
+        resultCount.textContent = `${totalCount}件`;
+
+        currentOffset += data ? data.length : 0;
+        moreArea.hidden = currentOffset >= totalCount;
+
+      } catch (error) {
+        console.error("日記検索エラー:", error);
+        showMessage("日記を読み込めませんでした。通信状態を確認してください。");
+        moreArea.hidden = true;
+      } finally {
+        isSearching = false;
+        searchButton.disabled = false;
+        moreButton.disabled = false;
+      }
+    }
+
+    searchButton.addEventListener("click", () => {
+      searchDiaries(true);
+    });
+
+    searchInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.isComposing) {
+        searchDiaries(true);
+      }
+    });
+
+    moreButton.addEventListener("click", () => {
+      searchDiaries(false);
+    });
+
+    // ログイン確認
+    async function initialize() {
+      try {
+        const { data, error } = await supabaseClient.auth.getUser();
+
+        if (error || !data.user) {
+          location.href = "login.html";
+          return;
+        }
+
+        currentUser = data.user;
+        searchButton.disabled = false;
+      } catch (error) {
+        console.error("認証確認エラー:", error);
+        location.href = "login.html";
+      }
+    }
+
+    initialize();
+  </script>
+</body>
+</html>
