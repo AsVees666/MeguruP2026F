@@ -52,7 +52,7 @@
       font: inherit;
     }
 
-    /* mypage.html / index.html と共通の画面全体レイアウト */
+    /* emotion.html / mypage.html と共通の画面全体レイアウト */
     #app {
       display: flex;
       flex-direction: column;
@@ -66,14 +66,35 @@
       background: var(--cream);
     }
 
-    /* 検索エリア・一覧はスクロール可能にする */
+    /* emotion.html と同じヘッダー領域 */
+    header {
+      height: 70px;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+
+    .header-menu-svg {
+      height: 36px;
+      width: auto;
+    }
+
+    #_メニュー {
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    /* メイン領域：ヘッダーとフッターの間でスクロール */
     main {
       flex: 1;
       min-height: 0;
       width: 100%;
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
-      padding: calc(56px + env(safe-area-inset-top, 0px)) 24px 28px;
+      padding: 8px 24px 28px;
     }
 
     .page-title {
@@ -255,76 +276,90 @@
     }
 
     /* 日記全文ダイアログ */
-    .dialog-overlay {
-      display: none;
+    .dialog-backdrop {
       position: fixed;
       inset: 0;
-      z-index: 100;
-      padding: 20px;
-      background: rgba(65, 52, 40, .38);
+      z-index: 20;
+      display: none;
       align-items: center;
       justify-content: center;
+      padding: 20px;
+      background: rgba(48, 39, 31, .38);
     }
 
-    .dialog-overlay.show {
+    .dialog-backdrop.is-open {
       display: flex;
     }
 
     .dialog {
-      width: min(100%, 460px);
+      font-family: 'Zen Maru Gothic', sans-serif;
+      font-weight: 400;
+      font-synthesis: none;
+      width: min(100%, 420px);
       max-height: 85vh;
       overflow-y: auto;
-      padding: 25px 23px;
-      border: 1.5px solid var(--light-brown);
-      border-radius: 18px;
+      padding: 28px 24px;
+      border-radius: 14px;
       background: #fbf8f2;
-      box-shadow: 0 8px 30px rgba(70, 50, 30, .15);
+      border: 1px solid #d8c3a5;
+      box-shadow: 0 8px 28px rgba(50, 35, 20, .18);
     }
 
     .dialog-date {
       margin: 0 0 10px;
       color: var(--brown);
-      font-size: 17px;
+      font-size: 18px;
       font-weight: 700;
     }
 
     .dialog-emotion {
       display: inline-block;
-      margin-bottom: 17px;
+      margin-bottom: 16px;
       padding: 5px 13px;
       border-radius: 20px;
-      background: #efe6d8;
+      background: #f2eadf;
       color: #927b63;
       font-size: 12px;
     }
 
     .dialog-content {
       margin: 0;
-      padding: 18px 0;
-      border-top: 1px solid #eadfd2;
-      color: var(--text);
+      padding: 16px 0;
+      border-top: 1px solid #d8c3a5;
+      color: #5f4b3a;
       font-size: 14px;
-      line-height: 2;
+      line-height: 1.9;
       white-space: pre-wrap;
       overflow-wrap: anywhere;
     }
 
-    .close-button {
-      display: block;
+    .dialog-actions {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .dialog button {
+      font-family: inherit;
+      font-weight: 500;
       min-width: 112px;
-      margin: 20px auto 0;
-      padding: 10px 25px;
-      border: 1px solid #9b8064;
+      padding: 10px 18px;
       border-radius: 7px;
+      border: 1px solid #9b8064;
       background: #9b8064;
       color: white;
-      font-weight: 500;
       cursor: pointer;
+    }
+
+    .dialog button:focus-visible {
+      outline: 2px solid #8b6f55;
+      outline-offset: 2px;
     }
 
     @media (max-width: 480px) {
       main {
-        padding: calc(52px + env(safe-area-inset-top, 0px)) 18px 24px;
+        padding: 4px 18px 24px;
       }
 
       .page-title {
@@ -332,7 +367,7 @@
       }
 
       .dialog {
-        padding: 22px 18px;
+        padding: 24px 18px;
       }
     }
   </style>
@@ -340,6 +375,18 @@
 
 <body>
   <div id="app">
+    <!-- emotion.html と完全に同じヘッダー -->
+    <header>
+      <svg class="header-menu-svg" viewBox="30 70 70 60" xmlns="http://www.w3.org/2000/svg">
+        <g id="_メニュー" data-name="メニュー" role="button" tabindex="0" aria-label="メニュー" style="cursor: pointer;">
+          <rect fill="transparent" x="30" y="70" width="70" height="60"/>
+          <line stroke="#8b6f55" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" fill="none" x1="40" y1="84.22" x2="88.33" y2="84.22"/>
+          <line stroke="#8b6f55" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" fill="none" x1="40" y1="101.2" x2="88.33" y2="101.2"/>
+          <line stroke="#8b6f55" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" fill="none" x1="40" y1="118.18" x2="88.33" y2="118.18"/>
+        </g>
+      </svg>
+    </header>
+
     <main aria-label="日記を探す">
       <h1 class="page-title">日記を探す</h1>
       <p class="page-description">
@@ -373,6 +420,7 @@
       </div>
     </main>
 
+    <!-- mypage.html と完全に同じフッター -->
     <footer>
       <svg class="footer-svg" viewBox="60 1460 630 80" xmlns="http://www.w3.org/2000/svg">
         <g id="_カレンダー" data-name="カレンダー" role="button" aria-label="カレンダー">
@@ -411,12 +459,14 @@
   </div>
 
   <!-- 日記全文ダイアログ -->
-  <div class="dialog-overlay" id="detailDialog">
+  <div class="dialog-backdrop" id="detailDialog" role="presentation">
     <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogDate">
       <h2 class="dialog-date" id="dialogDate"></h2>
       <span class="dialog-emotion" id="dialogEmotion"></span>
       <p class="dialog-content" id="dialogContent"></p>
-      <button class="close-button" id="closeDialog">閉じる</button>
+      <div class="dialog-actions">
+        <button type="button" id="closeDialog">閉じる</button>
+      </div>
     </section>
   </div>
 
@@ -485,7 +535,14 @@
       });
     }
 
-    // フッターナビゲーション（mypage.html / index.html と共通）
+    // emotion.html と同じメニュー起動処理
+    addClick("_メニュー", "メニュー", () => {
+      if (typeof window.openMenu === "function") {
+        window.openMenu();
+      }
+    });
+
+    // mypage.html と同じフッターナビゲーション
     addClick("_ホーム", "ホーム", () => window.location.href = PAGE_URLS.home);
     addClick("_カレンダー", "カレンダー", () => window.location.href = PAGE_URLS.calendar);
     addClick("_検索", "検索", () => window.location.href = PAGE_URLS.search);
@@ -547,11 +604,13 @@
         dialogEmotion.style.display = "none";
       }
 
-      detailDialog.classList.add("show");
+      detailDialog.classList.add("is-open");
+      const closeBtn = document.getElementById("closeDialog");
+      if (closeBtn) closeBtn.focus();
     }
 
     function closeDiary() {
-      detailDialog.classList.remove("show");
+      detailDialog.classList.remove("is-open");
     }
 
     document.getElementById("closeDialog").addEventListener("click", closeDiary);
