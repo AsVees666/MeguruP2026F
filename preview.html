@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>日記 - 印刷プレビュー</title>
+
+<!-- メニューオーバーレイの設定 -->
+<link rel="stylesheet" href="menu.css">
+<script src="menu.js" defer></script>
+
+<!-- Google Fonts：Zen Maru Gothicを読み込む -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+
+<!-- Supabase / QRCode / PDF生成 -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+
+<style>
+:root {
+  --paper: #f4eee5;
+  --brown: #8b6f55;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--paper);
+  color: var(--brown);
+  font-family: "Zen Maru Gothic", sans-serif;
+  font-weight: 500;
+}
+
+button, select {
+  font: inherit;
+}
+
+/* アプリ全体のフレックスレイアウト（全体はスクロールしない） */
+#app {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  max-width: 600px;
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+  background: var(--paper);
+}
+
+/* ヘッダー領域 */
+header {
+  height: 70px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.header-svg {
+  height: 36px;
+  width: auto;
+  display: block;
+}
+
+/* メイン領域：画面内に収め、プレビュー枠の中だけ縦スクロール */
+main {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  padding: 4px 16px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* プレビューUI SVG（デザイン・比率保持） */
+.preview-ui {
+  position: relative;
+  width: min(100%, calc((100dvh - 162px) * 467.5 / 977.88));
+  max-width: 467.5px;
+  aspect-ratio: 467.5 / 977.88;
+  margin: 0 auto;
+}
+
+.preview-ui > svg.ui-art {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* 枠線はスクロール領域側で描画するため、下のSVG枠線は隠す */
+.preview-ui #_プレビュー枠 {
+  display: none;
+}
+
+/* プレビュー枠の中だけ縦スクロール（枠内で切れないように余白を確保） */
+.preview-window {
+  position: absolute;
+  left: 0.107%;
+  top: 6.733%;
+  width: 99.786%;
+  height: 65.955%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-radius: 12px;
+  padding: 12px 20px;
+  background: #f3ede4;
+  border: 1px solid var(--brown);
+  scrollbar-width: thin;
+  scrollbar-color: #c8b9a8 transparent;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.preview-pages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+}
+
+.preview-page {
+  width: 100%;
+  aspect-ratio: 436.54 / 612.28;
+  flex-shrink: 0;
+  background: #f3ede4;
+}
+
+.preview-page svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* SVG上の透明クリック領域 */
+.ui-button {
+  position: absolute;
+  z-index: 2;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.period-button {
+  left: 63.26%;
+  top: 0;
+  width: 36.64%;
+  height: 4.875%;
+}
+
+.print-button {
+  left: 47.93%;
+  top: 85.256%;
+  width: 50.08%;
+  height: 6.177%;
+}
+
+.pdf-button {
+  left: 47.93%;
+  top: 93.824%;
+  width: 50.08%;
+  height: 6.177%;
+}
+
+/* フッター領域 */
+footer {
+  height: 80px;
+  padding: 0 32px calc(12px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.footer-svg {
+  width: 100%;
+  height: 50px;
+  display: block;
+}
+
+svg [role="button"], .interactive-btn {
+  cursor: pointer;
+}
+
+/* 期間選択ダイアログ */
+.dialog-background {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, .35);
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.dialog-background.show {
+  display: flex;
+}
+
+.dialog {
+  width: 100%;
+  max-width: 360px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px 20px;
+  box-shadow: 0 5px 25px rgba(0, 0, 0, .12);
+}
+
+.dialog h2 {
+  margin: 0 0 18px;
+  font-size: 19px;
+  text-align: center;
+  color: var(--brown);
+}
+
+.dialog label {
+  display: block;
+  margin: 12px 0 5px;
+  font-size: 14px;
+  color: var(--brown);
+}
+
+.dialog select {
+  width: 100%;
+  height: 44px;
+  border: 1px solid #d7c9b9;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--brown);
+  padding: 0 10px;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.dialog-actions button {
+  flex: 1;
+  height: 44px;
+  border: 0;
+  border-radius: 22px;
+  cursor: pointer;
+}
+
+.cancel-button {
+  background: var(--paper);
+  color: var(--brown);
+}
+
+.apply-button {
+  background: var(--brown);
+  color: #fff;
+}
+
+/* 印刷専用領域（A5縦・余白なし） */
+#printOutput {
+  display: none;
+}
+
+@page {
+  size: A5 portrait;
+  margin: 0;
+}
+
+@media print {
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 148mm !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+    font-family: "Zen Maru Gothic", sans-serif !important;
+  }
+
+  #app,
+  .dialog-background {
+    display: none !important;
+  }
+
+  #printOutput {
+    display: block !important;
+  }
+
+  .print-page {
+    width: 148mm;
+    height: 210mm;
+    margin: 0;
+    padding: 0;
+    page-break-after: always;
+    break-after: page;
+    overflow: hidden;
+  }
+
+  .print-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  .print-page svg {
+    display: block;
+    width: 148mm;
+    height: 210mm;
+  }
+}
+</style>
+</head>
+
+<body>
+<div id="app">
+
+  <!-- ヘッダー（メニュー） -->
+  <header>
+    <svg class="header-svg" viewBox="30 70 70 60" xmlns="http://www.w3.org/2000/svg">
+      <g id="_メニュー" data-name="メニュー" role="button" aria-label="メニュー">
+        <rect fill="transparent" x="30" y="70" width="70" height="60"/>
+        <line stroke="#8b6f55" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" fill="none" x1="40" y1="84.22" x2="88.33" y2="84.22"/>
+        <line stroke="#8b6f55" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" fill="none" x1="40" y1="101.2" x2="88.33" y2="101.2"/>
+        <line stroke="#8b6f55" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" fill="none" x1="40" y1="118.18" x2="88.33" y2="118.18"/>
+      </g>
+    </svg>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main id="main-stage">
+    <div class="preview-ui">
+      <svg class="ui-art" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 467.5 977.88">
+        <defs>
+          <style>
+            .ui-cls-1 {
+              fill: #fff;
+            }
+            .ui-cls-1, .ui-cls-2, .ui-cls-3, .ui-cls-4 {
+              font-family: "Zen Maru Gothic", sans-serif;
+              font-weight: 500;
+            }
+            .ui-cls-1, .ui-cls-3 {
+              font-size: 25px;
+            }
+            .ui-cls-5 {
+              fill: none;
+              stroke: #8b6f55;
+              stroke-miterlimit: 10;
+            }
+            .ui-cls-2 {
+              fill: #f4eee5;
+            }
+            .ui-cls-2, .ui-cls-4 {
+              font-size: 20px;
+            }
+            .ui-cls-3, .ui-cls-6, .ui-cls-4 {
+              fill: #8b6f55;
+            }
+            .ui-cls-7 {
+              letter-spacing: .25em;
+            }
+          </style>
+        </defs>
+
+        <g id="_月選択" data-name="月選択">
+          <rect class="ui-cls-6" x="295.77" y="0" width="171.23" height="47.68" rx="23.84" ry="23.84"/>
+          <text class="ui-cls-2" transform="translate(313.13 31.44)"><tspan x="0" y="0">期間を変更する</tspan></text>
+        </g>
+
+        <g id="_選択した月" data-name="選択した月">
+          <text id="periodLabel" class="ui-cls-3" transform="translate(.5 31.44)"><tspan x="0" y="0">2026.1</tspan><tspan class="ui-cls-7" x="63.52" y="0">1</tspan><tspan x="79.72" y="0">月</tspan></text>
+        </g>
+
+        <g id="_プレビュー枠" data-name="プレビュー枠">
+          <rect class="ui-cls-5" x=".5" y="65.84" width="466.5" height="644.96" rx="12" ry="12"/>
+        </g>
+
+        <g id="_印刷ボタン" data-name="印刷ボタン">
+          <rect class="ui-cls-6" x="224.1" y="833.7" width="234.15" height="60.4" rx="30.2" ry="30.2"/>
+          <text class="ui-cls-1" transform="translate(291.18 873.4)"><tspan x="0" y="0">印刷する</tspan></text>
+        </g>
+
+        <g id="PDF保存ボタン">
+          <rect class="ui-cls-6" x="224.1" y="917.47" width="234.15" height="60.4" rx="30.2" ry="30.2"/>
+          <text class="ui-cls-1" transform="translate(249.49 957.18)"><tspan x="0" y="0">PD</tspan><tspan class="ui-cls-7" x="32.57" y="0">F</tspan><tspan x="52.8" y="0">として保存</tspan></text>
+        </g>
+
+        <g id="_固定テキスト" data-name="固定テキスト">
+          <text class="ui-cls-4" transform="translate(.5 751.15)"><tspan x="0" y="0">印刷サイズ</tspan><tspan class="ui-cls-7" x="100" y="0">は</tspan><tspan x="125" y="0">A</tspan><tspan class="ui-cls-7" x="138.1" y="0">5</tspan><tspan x="152.48" y="0">サイズ推奨</tspan></text>
+        </g>
+      </svg>
+
+      <!-- プレビュー枠の中だけ縦スクロール -->
+      <div class="preview-window" id="previewWindow">
+        <div id="previewPages" class="preview-pages"></div>
+      </div>
+
+      <!-- クリック領域 -->
+      <button class="ui-button period-button" id="openPeriodDialog" type="button" aria-label="期間を変更する"></button>
+      <button class="ui-button print-button" id="printButton" type="button" aria-label="印刷する"></button>
+      <button class="ui-button pdf-button" id="pdfButton" type="button" aria-label="PDFとして保存"></button>
+    </div>
+  </main>
+
+  <!-- フッター（カレンダー・検索・ホーム・マイページ） -->
+  <footer>
+    <svg class="footer-svg" viewBox="60 1460 630 80" xmlns="http://www.w3.org/2000/svg">
+      <g id="_カレンダー" data-name="カレンダー" role="button" aria-label="カレンダー">
+        <path stroke="#8b6f55" stroke-width="3" stroke-miterlimit="10" fill="none" d="M82.77,1483.38h58.44v36.73c0,3.87-3.14,7.02-7.02,7.02h-44.4c-3.87,0-7.02-3.14-7.02-7.02v-36.73h0Z"/>
+        <path stroke="#8b6f55" stroke-width="3" stroke-miterlimit="10" fill="#8b6f55" d="M85.41,1477.07h53.16c1.46,0,2.64,1.18,2.64,2.64v2.91h-58.44v-2.91c0-1.46,1.18-2.64,2.64-2.64Z"/>
+        <rect stroke="#8b6f55" stroke-miterlimit="10" fill="none" x="89.13" y="1469.38" width="4.46" height="11.2" rx="1.89" ry="1.89"/>
+        <rect stroke="#8b6f55" stroke-miterlimit="10" fill="none" x="102.88" y="1469.38" width="4.46" height="11.2" rx="1.89" ry="1.89"/>
+        <rect stroke="#8b6f55" stroke-miterlimit="10" fill="none" x="130.39" y="1469.38" width="4.46" height="11.2" rx="1.89" ry="1.89"/>
+        <rect stroke="#8b6f55" stroke-miterlimit="10" fill="none" x="116.64" y="1469.38" width="4.46" height="11.2" rx="1.89" ry="1.89"/>
+        <rect fill="#8b6f55" x="91.16" y="1488.57" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+        <rect fill="#8b6f55" x="102.53" y="1488.57" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+        <rect fill="#8b6f55" x="113.91" y="1488.57" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+        <rect fill="#8b6f55" x="125.29" y="1488.57" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+        <rect fill="#8b6f55" x="91.16" y="1501.5" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+        <rect fill="#8b6f55" x="102.53" y="1501.5" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+        <rect fill="#8b6f55" x="113.91" y="1501.5" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+        <rect fill="#8b6f55" x="125.29" y="1501.5" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+        <rect fill="#8b6f55" x="91.16" y="1514.42" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+        <rect fill="#8b6f55" x="102.53" y="1514.42" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+        <rect fill="#8b6f55" x="113.91" y="1514.42" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+        <rect fill="#8b6f55" x="125.29" y="1514.42" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+      </g>
+
+      <g id="_検索" data-name="検索" role="button" aria-label="検索">
+        <path stroke="#8b6f55" stroke-width="3" stroke-miterlimit="10" fill="none" d="M303.59,1490.25c0,4.52-1.44,8.71-3.88,12.12-1.35,1.89-2.99,3.54-4.88,4.88-3.41,2.43-7.59,3.88-12.11,3.88-11.53,0-20.87-9.35-20.87-20.88s9.34-20.87,20.87-20.87,20.87,9.35,20.87,20.87Z"/>
+        <path fill="#8b6f55" d="M318.7,1525.61l-.62.64c-1.17,1.17-3.09,1.17-4.26,0l-18.99-18.99c1.89-1.35,3.54-2.99,4.88-4.88l18.99,18.99c1.17,1.17,1.17,3.07,0,4.24Z"/>
+      </g>
+
+      <g id="_ホーム" data-name="ホーム" role="button" aria-label="ホーム">
+        <path fill="#8b6f55" d="M494,1503.55h-11.27v23.57h-13.05v-12.97c0-3.12-2.53-5.65-5.65-5.65s-5.65,2.53-5.65,5.65v12.97h-13.05v-23.57h-11.27c-1.86,0-2.8-2.26-1.48-3.58l29.97-29.97c.82-.82,2.15-.82,2.97,0l29.97,29.97c1.32,1.32.39,3.58-1.48,3.58Z"/>
+      </g>
+
+      <g id="_マイページ" data-name="マイページ" role="button" aria-label="マイページ">
+        <circle fill="#8b6f55" cx="645.96" cy="1483.66" r="14.28"/>
+        <path fill="#8b6f55" d="M667.23,1527.13h-42.54c0-14.48,9.52-26.21,21.26-26.21s21.28,11.73,21.28,26.21Z"/>
+      </g>
+    </svg>
+  </footer>
+
+</div>
+
+<!-- 期間選択ダイアログ（1か月のみ・複数月どちらも選択可） -->
+<div class="dialog-background" id="periodDialog">
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+    <h2 id="dialogTitle">印刷する期間</h2>
+
+    <label for="startMonth">開始月</label>
+    <select id="startMonth"></select>
+
+    <label for="endMonth">終了月（1か月の場合は開始月と同じ）</label>
+    <select id="endMonth"></select>
+
+    <div class="dialog-actions">
+      <button class="cancel-button" id="cancelPeriod" type="button">キャンセル</button>
+      <button class="apply-button" id="applyPeriod" type="button">決定</button>
+    </div>
+  </div>
+</div>
+
+<!-- 印刷専用領域 -->
+<div id="printOutput"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const SVG_NS = "http://www.w3.org/2000/svg";
+
+  /* Supabase設定（calendar.html と同一） */
+  const SUPABASE_URL = "https://vhzxwnyxgmtgteatgwcj.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_zFptSnTXIBaVQFCeYairJQ_WAx6ZL1L";
+  const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const PAGES = {
+    home: "index.html",
+    calendar: "calendar.html",
+    search: "kensaku.html",
+    mypage: "mypage.html"
+  };
+
+  /* 印刷物上部のロゴ画像ファイル名（必要に応じて変更） */
+  const LOGO_IMAGE = "ロゴ.png";
+
+  /* 印刷物SVGテンプレート */
+  const PRINT_TEMPLATE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 436.54 612.28">
+  <defs>
+    <style>
+      .cls-1, .cls-2 {
+        fill: none;
+      }
+      .cls-3 {
+        font-size: 10px;
+      }
+      .cls-3, .cls-4, .cls-5 {
+        fill: #8a6e54;
+      }
+      .cls-6 {
+        fill: #bbc184;
+        font-size: 30px;
+      }
+      .cls-6, .cls-5 {
+        font-family: "Zen Maru Gothic", sans-serif;
+        font-weight: 700;
+      }
+      .cls-7 {
+        font-family: "Zen Maru Gothic", sans-serif;
+        font-weight: 500;
+      }
+      .cls-2 {
+        stroke: #bbc184;
+        stroke-dasharray: 5 5;
+        stroke-linecap: round;
+        stroke-miterlimit: 10;
+      }
+      .cls-8 {
+        fill: #0069b4;
+      }
+      .cls-8, .cls-9, .cls-4 {
+        font-family: "Zen Maru Gothic", sans-serif;
+        font-size: 8.49px;
+      }
+      .cls-10 {
+        fill: #a8c27e;
+      }
+      .cls-11 {
+        letter-spacing: -.02em;
+      }
+      .cls-12 {
+        letter-spacing: -.01em;
+      }
+      .cls-13 {
+        fill: #cacacb;
+      }
+      .cls-9 {
+        fill: #e5817f;
+      }
+      .cls-14 {
+        font-family: "Zen Maru Gothic", sans-serif;
+      }
+      .cls-15 {
+        fill: #f3ede4;
+      }
+      .cls-5 {
+        font-size: 20px;
+      }
+    </style>
+  </defs>
+  <g id="_背景_ベース_" data-name="背景（ベース）">
+    <rect class="cls-15" width="436.54" height="612.28"/>
+  </g>
+  <g id="_カレンダー枠ガイド" data-name="カレンダー枠ガイド">
+    <rect class="cls-1" x="66.06" y="201.1" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="109.55" y="201.1" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="153.04" y="201.1" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="196.52" y="201.1" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="240.01" y="201.1" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="283.5" y="201.1" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="326.99" y="201.1" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="66.06" y="251.99" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="109.55" y="251.99" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="153.04" y="251.99" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="196.52" y="251.99" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="240.01" y="251.99" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="283.5" y="251.99" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="326.99" y="251.99" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="66.06" y="302.88" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="109.55" y="302.88" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="153.04" y="302.88" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="196.52" y="302.88" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="240.01" y="302.88" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="283.5" y="302.88" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="326.99" y="302.88" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="66.06" y="353.77" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="109.55" y="353.77" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="153.04" y="353.77" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="196.52" y="353.77" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="240.01" y="353.77" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="283.5" y="353.77" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="326.99" y="353.77" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="66.06" y="404.67" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="109.55" y="404.67" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="153.04" y="404.67" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="196.52" y="404.67" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="240.01" y="404.67" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="283.5" y="404.67" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="326.99" y="404.67" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="66.06" y="455.56" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="109.55" y="455.56" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="153.04" y="455.56" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="196.52" y="455.56" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="240.01" y="455.56" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="283.5" y="455.56" width="43.49" height="50.89"/>
+    <rect class="cls-1" x="326.99" y="455.56" width="43.49" height="50.89"/>
+  </g>
+  <g id="_文字日記マーク" data-name="文字日記マーク">
+    <path class="cls-10" d="M92.35,209.75c.12,3.5-3.59,4.74-6.02,4.15q-.18-.05-.36-.12c-1.73-.69-2.93-2.16-2.93-3.88,0-2.04,1.71-3.74,3.99-4.17.12-.02.24-.04.37-.06,3.21-.45,5.68.17,5.03,3.76C92.41,209.54,92.39,209.65,92.35,209.75Z"/>
+  </g>
+  <g id="_マーク位置" data-name="マーク位置">
+    <rect class="cls-1" x="74.18" y="220.4" width="27.21" height="27.21"/>
+  </g>
+  <g id="_曜日文字固定" data-name="曜日文字固定">
+    <g>
+      <text class="cls-9" transform="translate(80.25 195.63)"><tspan x="0" y="0">Sun</tspan></text>
+      <text class="cls-4" transform="translate(123.09 195.63)"><tspan x="0" y="0">Mon</tspan></text>
+      <text class="cls-4" transform="translate(167.34 195.63)"><tspan class="cls-11" x="0" y="0">T</tspan><tspan x="4.44" y="0">ue</tspan></text>
+      <text class="cls-4" transform="translate(209.83 195.63)"><tspan class="cls-12" x="0" y="0">W</tspan><tspan x="7.63" y="0">ed</tspan></text>
+      <text class="cls-4" transform="translate(254.33 195.63)"><tspan x="0" y="0">Thu</tspan></text>
+      <text class="cls-4" transform="translate(299.55 195.63)"><tspan x="0" y="0">Fri</tspan></text>
+      <text class="cls-8" transform="translate(342.58 195.63)"><tspan x="0" y="0">Sat</tspan></text>
+    </g>
+  </g>
+  <g id="_日付位置" data-name="日付位置">
+    <rect class="cls-1" x="83.32" y="205.3" width="8.97" height="8.97"/>
+  </g>
+  <g id="_月表示" data-name="月表示">
+    <text class="cls-5" transform="translate(188.55 147.79)"><tspan x="0" y="0">2026.11</tspan></text>
+  </g>
+  <g id="QRコード">
+    <rect class="cls-13" x="318.46" y="516.71" width="56.69" height="56.69"/>
+  </g>
+  <g id="_固定オブジェクト" data-name="固定オブジェクト">
+    <text class="cls-3" transform="translate(145.45 573.4)"><tspan class="cls-7" x="0" y="0">ここを読み込んで記録を振り返る</tspan><tspan class="cls-14" x="150" y="0">▶︎</tspan></text>
+    <line class="cls-2" x1="86.8" y1="142.21" x2="180.82" y2="142.21"/>
+    <line class="cls-2" x1="255.71" y1="142.21" x2="349.73" y2="142.21"/>
+  </g>
+  <g id="_ロゴ" data-name="ロゴ">
+    <rect class="cls-1" x="192.98" y="66.09" width="50.58" height="50.58"/>
+  </g>
+</svg>`;
+
+  const FIRST_YEAR = 2026;
+  const FIRST_MONTH = 11;
+
+  const EMOTION_IMAGES = {
+    ukiuki: "うきうき.png",
+    hokkori: "ほっこり.png",
+    massara: "まっさら.png",
+    meramera: "めらめら.png",
+    sowasowa: "そわそわ.png",
+    punpun: "ぷんぷん.png",
+    moyamoya: "もやもや.png",
+    shinmiri: "しんみり.png",
+    gakkuri: "がっくり.png",
+    hetahhe: "へとへと.png"
+  };
+
+  let diaryRecords = {};
+  let selectedStart = "";
+  let selectedEnd = "";
+
+  function monthString(year, month) {
+    return `${year}-${String(month).padStart(2, "0")}`;
+  }
+
+  function parseMonth(value) {
+    const [year, month] = value.split("-").map(Number);
+    return { year, month };
+  }
+
+  function getMonthList() {
+    const now = new Date();
+    const current = new Date(now.getFullYear(), now.getMonth(), 1);
+    const first = new Date(FIRST_YEAR, FIRST_MONTH - 1, 1);
+    const list = [];
+    for (let d = new Date(first); d <= current; d.setMonth(d.getMonth() + 1)) {
+      list.push(monthString(d.getFullYear(), d.getMonth() + 1));
+    }
+    if (!list.length) {
+      list.push(monthString(FIRST_YEAR, FIRST_MONTH));
+    }
+    return list;
+  }
+
+  function getInitialMonth() {
+    const now = new Date();
+    let d = new Date(now.getFullYear(), now.getMonth(), 1);
+    if (now.getDate() < 25) {
+      d.setMonth(d.getMonth() - 1);
+    }
+    const first = new Date(FIRST_YEAR, FIRST_MONTH - 1, 1);
+    if (d < first) d = first;
+    return monthString(d.getFullYear(), d.getMonth() + 1);
+  }
+
+  function getMonthsBetween(start, end) {
+    const result = [];
+    const s = parseMonth(start);
+    const e = parseMonth(end);
+    const cur = new Date(s.year, s.month - 1, 1);
+    const last = new Date(e.year, e.month - 1, 1);
+    while (cur <= last) {
+      result.push({ year: cur.getFullYear(), month: cur.getMonth() + 1 });
+      cur.setMonth(cur.getMonth() + 1);
+    }
+    return result;
+  }
+
+  /* Supabaseから日記データを取得 */
+  async function loadDiaryRecords() {
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    if (userError || !user) {
+      window.location.href = "login.html";
+      return false;
+    }
+
+    const { data, error } = await supabaseClient
+      .from("diaries")
+      .select("entry_date, emotion_id, content")
+      .eq("user_id", user.id);
+
+    if (error) {
+      console.error("日記の取得に失敗しました:", error);
+      alert("日記データを読み込めませんでした。");
+      return false;
+    }
+
+    diaryRecords = {};
+    (data || []).forEach(entry => {
+      diaryRecords[entry.entry_date] = {
+        emotion_id: entry.emotion_id,
+        content: entry.content || ""
+      };
+    });
+
+    return true;
+  }
+
+  function svgEl(name, attrs = {}) {
+    const el = document.createElementNS(SVG_NS, name);
+    Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+    return el;
+  }
+
+  function createMonthSVG(year, month) {
+    const parsed = new DOMParser().parseFromString(PRINT_TEMPLATE, "image/svg+xml");
+    const svg = parsed.documentElement;
+    if (parsed.querySelector("parsererror")) {
+      throw new Error("印刷物SVGの解析に失敗しました。");
+    }
+
+    svg.setAttribute("xmlns", SVG_NS);
+    svg.setAttribute("viewBox", "0 0 436.54 612.28");
+    svg.setAttribute("width", "436.54");
+    svg.setAttribute("height", "612.28");
+
+    const monthText = svg.querySelector("#_月表示 text");
+    if (monthText) {
+      monthText.replaceChildren();
+      const span = svgEl("tspan", { x: "0", y: "0" });
+      span.textContent = `${year}.${String(month).padStart(2, "0")}`;
+      monthText.appendChild(span);
+    }
+
+    /* ロゴ画像を #_ロゴ 枠内に配置 */
+    const logoGroup = svg.querySelector("#_ロゴ");
+    const logoRect = logoGroup?.querySelector("rect");
+    if (logoGroup && logoRect && LOGO_IMAGE) {
+      const lx = Number(logoRect.getAttribute("x") || 192.98);
+      const ly = Number(logoRect.getAttribute("y") || 66.09);
+      const lw = Number(logoRect.getAttribute("width") || 50.58);
+      const lh = Number(logoRect.getAttribute("height") || 50.58);
+      logoGroup.replaceChildren();
+      const logoImg = svgEl("image", {
+        x: lx,
+        y: ly,
+        width: lw,
+        height: lh,
+        href: LOGO_IMAGE,
+        "data-overlay": "true",
+        preserveAspectRatio: "xMidYMid meet"
+      });
+      logoGroup.appendChild(logoImg);
+    }
+
+    const guides = [...svg.querySelectorAll("#_カレンダー枠ガイド rect")];
+    const firstDay = new Date(year, month - 1, 1).getDay();
+    const daysInMonth = new Date(year, month, 0).getDate();
+
+    const dateGroup = svg.querySelector("#_日付位置");
+    const iconGroup = svg.querySelector("#_マーク位置");
+    const diaryMarkGroup = svg.querySelector("#_文字日記マーク");
+
+    const originalDiaryPath = diaryMarkGroup?.querySelector("path");
+    const originalDateRect = dateGroup?.querySelector("rect");
+    const originalIconRect = iconGroup?.querySelector("rect");
+    const firstCell = guides[0];
+
+    const dateXOffset = originalDateRect && firstCell
+      ? Number(originalDateRect.getAttribute("x")) +
+        Number(originalDateRect.getAttribute("width")) / 2 -
+        Number(firstCell.getAttribute("x"))
+      : 21.745;
+    const dateYOffset = originalDateRect && firstCell
+      ? Number(originalDateRect.getAttribute("y")) +
+        Number(originalDateRect.getAttribute("height")) / 2 -
+        Number(firstCell.getAttribute("y"))
+      : 8.685;
+
+    const iconXOffset = originalIconRect && firstCell
+      ? Number(originalIconRect.getAttribute("x")) - Number(firstCell.getAttribute("x"))
+      : 8.12;
+    const iconYOffset = originalIconRect && firstCell
+      ? Number(originalIconRect.getAttribute("y")) - Number(firstCell.getAttribute("y"))
+      : 19.3;
+    const iconW = originalIconRect ? Number(originalIconRect.getAttribute("width") || 27.21) : 27.21;
+    const iconH = originalIconRect ? Number(originalIconRect.getAttribute("height") || 27.21) : 27.21;
+
+    dateGroup?.replaceChildren();
+    iconGroup?.replaceChildren();
+    diaryMarkGroup?.replaceChildren();
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const index = firstDay + day - 1;
+      const cell = guides[index];
+      if (!cell) continue;
+
+      const cellX = Number(cell.getAttribute("x"));
+      const cellY = Number(cell.getAttribute("y"));
+      const dateKey = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const record = diaryRecords[dateKey];
+
+      // 1. 感情アイコン（一番下）
+      if (record) {
+        const imageFile = EMOTION_IMAGES[record.emotion_id];
+        if (imageFile) {
+          const iconImage = svgEl("image", {
+            x: cellX + iconXOffset,
+            y: cellY + iconYOffset,
+            width: iconW,
+            height: iconH,
+            href: imageFile,
+            "data-overlay": "true",
+            preserveAspectRatio: "xMidYMid meet"
+          });
+          iconGroup?.appendChild(iconImage);
+        }
+      }
+
+      // 2. 文字日記マーク（日付の後ろの背景丸）
+      if (record && record.content && record.content.trim() && originalDiaryPath) {
+        const mark = originalDiaryPath.cloneNode(true);
+        mark.setAttribute("transform", `translate(${cellX - 66.06} ${cellY - 201.1})`);
+        diaryMarkGroup?.appendChild(mark);
+      }
+
+      // 3. 日付数字（文字日記マークの上に重なるように一番上）
+      const dateText = svgEl("text", {
+        x: cellX + dateXOffset,
+        y: cellY + dateYOffset + 2.9,
+        "font-size": "8.97",
+        "font-family": '"Zen Maru Gothic", sans-serif',
+        "font-weight": "500",
+        fill: index % 7 === 0 ? "#e5817f" : index % 7 === 6 ? "#0069b4" : "#8a6e54",
+        "text-anchor": "middle"
+      });
+      dateText.textContent = String(day);
+      dateGroup?.appendChild(dateText);
+    }
+
+    const qrGroup = svg.querySelector("#QRコード");
+    if (qrGroup) {
+      qrGroup.replaceChildren();
+      qrGroup.appendChild(svgEl("rect", {
+        x: "318.46",
+        y: "516.71",
+        width: "56.69",
+        height: "56.69",
+        fill: "#fff"
+      }));
+    }
+
+    return svg;
+  }
+
+  async function addQRCode(svg, year, month) {
+    const qrGroup = svg.querySelector("#QRコード");
+    if (!qrGroup || typeof QRCode === "undefined") return;
+
+    const targetURL = new URL(PAGES.calendar, window.location.href);
+    targetURL.searchParams.set("year", year);
+    targetURL.searchParams.set("month", month);
+
+    const temp = document.createElement("div");
+    new QRCode(temp, {
+      text: targetURL.href,
+      width: 180,
+      height: 180,
+      correctLevel: QRCode.CorrectLevel.M
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const canvas = temp.querySelector("canvas");
+    if (!canvas) return;
+
+    const image = svgEl("image", {
+      x: "318.46",
+      y: "516.71",
+      width: "56.69",
+      height: "56.69",
+      href: canvas.toDataURL("image/png"),
+      "data-overlay": "true",
+      preserveAspectRatio: "none"
+    });
+    qrGroup.appendChild(image);
+  }
+
+  function updatePeriodLabel() {
+    const s = parseMonth(selectedStart);
+    const e = parseMonth(selectedEnd);
+    const text = selectedStart === selectedEnd
+      ? `${s.year}.${String(s.month).padStart(2, "0")}月`
+      : `${s.year}.${String(s.month).padStart(2, "0")}月〜${e.year}.${String(e.month).padStart(2, "0")}月`;
+
+    const el = document.getElementById("periodLabel");
+    if (!el) return;
+    el.replaceChildren();
+    const tspan = svgEl("tspan", { x: "0", y: "0" });
+    tspan.textContent = text;
+    el.appendChild(tspan);
+  }
+
+  async function renderPages() {
+    await document.fonts.ready;
+    const months = getMonthsBetween(selectedStart, selectedEnd);
+    const preview = document.getElementById("previewPages");
+    const printOutput = document.getElementById("printOutput");
+
+    preview.replaceChildren();
+    printOutput.replaceChildren();
+
+    for (const item of months) {
+      const svg = createMonthSVG(item.year, item.month);
+      await addQRCode(svg, item.year, item.month);
+
+      const previewPage = document.createElement("div");
+      previewPage.className = "preview-page";
+      previewPage.appendChild(document.importNode(svg, true));
+      preview.appendChild(previewPage);
+
+      const printPage = document.createElement("div");
+      printPage.className = "print-page";
+      printPage.appendChild(document.importNode(svg, true));
+      printOutput.appendChild(printPage);
+    }
+
+    updatePeriodLabel();
+  }
+
+  /* 期間選択ダイアログ */
+  function setupPeriodDialog() {
+    const list = getMonthList();
+    const startSelect = document.getElementById("startMonth");
+    const endSelect = document.getElementById("endMonth");
+    const dialog = document.getElementById("periodDialog");
+
+    startSelect.replaceChildren();
+    endSelect.replaceChildren();
+
+    list.forEach(value => {
+      const { year, month } = parseMonth(value);
+      const label = `${year}年${month}月`;
+      startSelect.add(new Option(label, value));
+      endSelect.add(new Option(label, value));
+    });
+
+    startSelect.value = selectedStart;
+    endSelect.value = selectedEnd;
+
+    document.getElementById("openPeriodDialog").addEventListener("click", () => {
+      startSelect.value = selectedStart;
+      endSelect.value = selectedEnd;
+      dialog.classList.add("show");
+    });
+
+    document.getElementById("cancelPeriod").addEventListener("click", () => {
+      dialog.classList.remove("show");
+    });
+
+    dialog.addEventListener("click", e => {
+      if (e.target === dialog) dialog.classList.remove("show");
+    });
+
+    document.getElementById("applyPeriod").addEventListener("click", async () => {
+      const start = startSelect.value;
+      const end = endSelect.value;
+      if (!start || !end || start > end) {
+        alert("期間の指定を確認してください。開始月は終了月以前を選んでください。");
+        return;
+      }
+      selectedStart = start;
+      selectedEnd = end;
+      dialog.classList.remove("show");
+      await renderPages();
+      document.getElementById("previewWindow").scrollTop = 0;
+    });
+  }
+
+  /* 印刷（A5縦・余白なし） */
+  async function printPages() {
+    try {
+      await document.fonts.ready;
+      window.print();
+    } catch (err) {
+      console.error(err);
+      alert("印刷の準備ができませんでした。");
+    }
+  }
+
+  /* 画像を読み込む。失敗を握りつぶさず、原因を分かるようにする */
+ function loadHtmlImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+
+    // Canvasへの描画時にCORSを明示する
+    img.crossOrigin = "anonymous";
+
+    img.onload = async () => {
+      try {
+        if (img.decode) await img.decode();
+        resolve(img);
+      } catch (err) {
+        reject(new Error(`画像をデコードできません: ${src}`));
+      }
+    };
+
+    img.onerror = () => {
+      reject(new Error(`画像を読み込めません: ${src}`));
+    };
+
+    img.src = new URL(src, document.baseURI).href;
+  });
+}
+
+  async function loadLogoImage() {
+    const candidates = [LOGO_IMAGE, "ロゴ.png"];
+    let lastError;
+    for (const name of [...new Set(candidates)]) {
+      try {
+        return { name, image: await loadHtmlImage(name) };
+      } catch (err) {
+        lastError = err;
+      }
+    }
+    throw lastError || new Error("ロゴ画像を読み込めません。");
+  }
+
+  /* SVGをA5（148mm × 210mm）余白なしのPNGバイト列に変換 */
+  async function svgToPngBytes(svgElement) {
+    const widthPx = 1748;
+    const heightPx = 2480;
+    const scaleX = widthPx / 436.54;
+    const scaleY = heightPx / 612.28;
+
+    const clone = svgElement.cloneNode(true);
+    clone.setAttribute("xmlns", SVG_NS);
+    clone.setAttribute("width", "436.54");
+    clone.setAttribute("height", "612.28");
+
+    const imageNodes = [...clone.querySelectorAll("image")];
+    const loadedOverlays = [];
+
+    for (const imgEl of imageNodes) {
+      const href = imgEl.getAttribute("href") || imgEl.getAttributeNS("http://www.w3.org/1999/xlink", "href");
+      const x = Number(imgEl.getAttribute("x") || 0);
+      const y = Number(imgEl.getAttribute("y") || 0);
+      const w = Number(imgEl.getAttribute("width") || 0);
+      const h = Number(imgEl.getAttribute("height") || 0);
+
+      // SVG内の相対パス画像をCanvasへ直接描画する。失敗した場合はPDF作成を中断する。
+      imgEl.remove();
+      if (href) {
+        const htmlImg = await loadHtmlImage(href);
+        loadedOverlays.push({ htmlImg, x, y, w, h });
+      }
+    }
+
+    const svgString = new XMLSerializer().serializeToString(clone);
+    const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = widthPx;
+    canvas.height = heightPx;
+    const ctx = canvas.getContext("2d");
+
+    await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = async () => {
+        if (img.decode) {
+          try { await img.decode(); } catch (_) {}
+        }
+        ctx.fillStyle = "#f3ede4";
+        ctx.fillRect(0, 0, widthPx, heightPx);
+        ctx.drawImage(img, 0, 0, widthPx, heightPx);
+
+        for (const ov of loadedOverlays) {
+          ctx.drawImage(
+            ov.htmlImg,
+            ov.x * scaleX,
+            ov.y * scaleY,
+            ov.w * scaleX,
+            ov.h * scaleY
+          );
+        }
+        resolve();
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
+
+    URL.revokeObjectURL(url);
+
+    const pngDataUrl = canvas.toDataURL("image/png");
+    const base64 = pngDataUrl.split(",")[1];
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  }
+
+  /* ブラウザへそのままPDFダウンロード（A5・余白なし・複数月対応） */
+  async function saveAsPdf() {
+  let previewWindow = null;
+  let downloadUrl = null;
+
+  try {
+    // 最初に空のタブを開く（ポップアップブロック対策）
+    previewWindow = window.open("about:blank", "_blank");
+
+    if (!previewWindow) {
+      alert("PDFプレビューを開けませんでした。ポップアップを許可してください。");
+      return;
+    }
+
+    if (!window.PDFLib) {
+      throw new Error("PDF生成ライブラリを読み込めませんでした。");
+    }
+
+    await document.fonts.ready;
+
+    const pages = [
+      ...document.querySelectorAll("#printOutput .print-page svg")
+    ];
+
+    if (!pages.length) {
+      throw new Error("保存するページがありません。");
+    }
+
+    const { PDFDocument } = window.PDFLib;
+    const pdfDoc = await PDFDocument.create();
+
+    const a5Width = 419.53;
+    const a5Height = 595.28;
+
+    for (const svg of pages) {
+      const pngBytes = await svgToPngBytes(svg);
+      const pngImage = await pdfDoc.embedPng(pngBytes);
+
+      const page = pdfDoc.addPage([a5Width, a5Height]);
+
+      page.drawImage(pngImage, {
+        x: 0,
+        y: 0,
+        width: a5Width,
+        height: a5Height
+      });
+    }
+
+    const pdfBytes = await pdfDoc.save();
+
+    const blob = new Blob([pdfBytes], {
+      type: "application/pdf"
+    });
+
+    downloadUrl = URL.createObjectURL(blob);
+
+    // ブラウザ標準のPDFプレビューを表示
+    previewWindow.location.href = downloadUrl;
+    previewWindow.focus();
+
+  } catch (err) {
+    console.error(err);
+
+    if (previewWindow && !previewWindow.closed) {
+      previewWindow.close();
+    }
+
+    alert(
+      "PDFの作成に失敗しました。\n" +
+      (err?.message || "原因を特定できませんでした。")
+    );
+  }
+}
+
+  function addHitArea(groupId, label, action) {
+    const group = document.getElementById(groupId);
+    if (!group || group.querySelector(".hit-area")) return;
+
+    let bounds;
+    try {
+      bounds = group.getBBox();
+    } catch (e) {
+      return;
+    }
+    if (!bounds.width || !bounds.height) return;
+
+    const hit = svgEl("rect", {
+      class: "hit-area",
+      x: bounds.x - 8,
+      y: bounds.y - 8,
+      width: bounds.width + 16,
+      height: bounds.height + 16,
+      fill: "transparent",
+      "pointer-events": "all",
+      role: "button",
+      tabindex: "0",
+      "aria-label": label
+    });
+    hit.style.cursor = "pointer";
+
+    hit.addEventListener("click", action);
+    hit.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        action();
+      }
+    });
+
+    group.appendChild(hit);
+  }
+
+  function navigate(page) {
+    location.href = new URL(PAGES[page], location.href).href;
+  }
+
+  async function initialize() {
+    try {
+      const loaded = await loadDiaryRecords();
+      if (!loaded) return;
+
+      selectedStart = getInitialMonth();
+      selectedEnd = selectedStart;
+
+      setupPeriodDialog();
+      await renderPages();
+
+      document.getElementById("printButton").addEventListener("click", printPages);
+      document.getElementById("pdfButton").addEventListener("click", saveAsPdf);
+
+      addHitArea("_メニュー", "メニュー", () => {
+        if (typeof window.openMenu === "function") window.openMenu();
+      });
+      addHitArea("_ホーム", "ホーム", () => navigate("home"));
+      addHitArea("_カレンダー", "カレンダー", () => navigate("calendar"));
+      addHitArea("_検索", "検索", () => navigate("search"));
+      addHitArea("_マイページ", "マイページ", () => navigate("mypage"));
+    } catch (err) {
+      console.error(err);
+      alert("プレビューを表示できませんでした。\n" + err.message);
+    }
+  }
+
+  initialize();
+})();
+</script>
+</body>
+</html>
