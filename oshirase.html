@@ -1,0 +1,707 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>お知らせ - meguru</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="menu.css">
+<script src="menu.js" defer></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #f4eee5;
+  font-family: 'Zen Maru Gothic', sans-serif;
+  color: #8b6f55;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  max-width: 600px;
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+  background: #f4eee5;
+}
+
+/* ヘッダー */
+header {
+  height: 70px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+/* メイン */
+main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 18px 16px 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* フッター */
+footer {
+  height: 80px;
+  padding: 0 32px calc(12px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.header-svg {
+  height: 36px;
+  width: auto;
+}
+
+.footer-svg {
+  width: 100%;
+  height: 50px;
+}
+
+svg [role="button"], .interactive-btn {
+  cursor: pointer;
+}
+
+/* お知らせ一覧 */
+.notice-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.notice-card {
+  display: block;
+  width: 100%;
+  max-width: 480px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-family: 'Zen Maru Gothic', sans-serif;
+}
+
+.notice-card svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* 管理者用 */
+.admin-area {
+  display: none;
+  width: 100%;
+  max-width: 480px;
+  margin: 4px 0 20px;
+}
+
+.admin-post-button {
+  width: 100%;
+  min-height: 48px;
+  border: 0;
+  border-radius: 24px;
+  background: #8b6f55;
+  color: #fff;
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.admin-note {
+  color: #8b6f55;
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: 11px;
+  text-align: center;
+  margin: 8px 0 0;
+}
+/* 新しいお知らせ投稿ダイアログ */
+#new-notice-dialog {
+  width: calc(100% - 36px);
+  max-width: 460px;
+  max-height: 85vh;
+  overflow-y: auto;
+  border: none;
+  border-radius: 18px;
+  padding: 25px 22px;
+  background: #fff;
+  color: #8b6f55;
+  box-shadow: 0 5px 25px rgba(80, 60, 40, 0.18);
+  font-family: 'Zen Maru Gothic', sans-serif;
+}
+
+#new-notice-dialog::backdrop {
+  background: rgba(60, 45, 30, 0.35);
+}
+
+#new-notice-dialog .dialog-title {
+  margin: 0 0 22px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+#new-notice-dialog .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 17px;
+}
+
+#new-notice-dialog .form-field label {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+#new-notice-dialog .form-field input,
+#new-notice-dialog .form-field textarea {
+  width: 100%;
+  border: 1px solid #d8c8b8;
+  border-radius: 9px;
+  padding: 11px 12px;
+  background: #fdfbf8;
+  color: #8b6f55;
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: 15px;
+}
+
+#new-notice-dialog .form-field textarea {
+  min-height: 180px;
+  resize: vertical;
+  line-height: 1.8;
+}
+
+#new-notice-dialog .form-field input:focus,
+#new-notice-dialog .form-field textarea:focus {
+  outline: 2px solid #c7ad95;
+  outline-offset: 1px;
+}
+
+#new-notice-dialog .dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+#new-notice-dialog .dialog-actions button {
+  min-width: 100px;
+  min-height: 42px;
+  border: none;
+  border-radius: 22px;
+  padding: 8px 16px;
+  background: #8b6f55;
+  color: #fff;
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#new-notice-dialog .dialog-actions .cancel-button {
+  background: #e9e1d8;
+  color: #8b6f55;
+}
+
+#new-notice-dialog .dialog-actions button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+@media (max-height: 650px) {
+  main {
+    padding-top: 10px;
+  }
+
+  .notice-list {
+    gap: 12px;
+  }
+}
+</style>
+</head>
+
+<body>
+<div id="app">
+
+  <header>
+    <svg class="header-svg" viewBox="30 70 70 60" xmlns="http://www.w3.org/2000/svg">
+      <g id="_メニュー" data-name="メニュー" role="button" aria-label="メニュー">
+        <line stroke="#8b6f55" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" fill="none" x1="40" y1="84.22" x2="88.33" y2="84.22"/>
+        <line stroke="#8b6f55" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" fill="none" x1="40" y1="101.2" x2="88.33" y2="101.2"/>
+        <line stroke="#8b6f55" stroke-width="3" stroke-linecap="round" stroke-miterlimit="10" fill="none" x1="40" y1="118.18" x2="88.33" y2="118.18"/>
+      </g>
+    </svg>
+  </header>
+
+  <main id="main-stage">
+
+    <section class="admin-area" id="admin-area" aria-label="管理者用操作">
+      <button class="admin-post-button" id="new-notice-button" type="button">
+        ＋ 新しいお知らせを投稿
+      </button>
+      <p class="admin-note">管理者アカウントでログイン中</p>
+    </section>
+
+    
+<section class="notice-list" id="notice-list" aria-label="お知らせ一覧">
+</section>
+
+<template id="notice-card-template">
+  <button class="notice-card" type="button">
+
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 649.63 264.29"
+      role="img"
+    >
+      <defs>
+        <style>
+          .notice-title,
+          .notice-date,
+          .notice-category,
+          .notice-version {
+            font-family: 'Zen Maru Gothic', sans-serif;
+            font-weight: 700;
+          }
+
+          .notice-version,
+          .notice-date {
+            font-size: 25px;
+            fill: #8b6f55;
+          }
+
+          .notice-page-title {
+            font-size: 30px;
+            fill: #8b6f55;
+          }
+
+          .notice-category {
+            font-size: 20px;
+            fill: #8b6f55;
+          }
+
+          .notice-white {
+            fill: #fff;
+          }
+
+          .notice-beige {
+            fill: #f4eee5;
+          }
+        </style>
+      </defs>
+
+      <rect
+        class="notice-white"
+        y="70.29"
+        width="649.63"
+        height="194"
+        rx="11.07"
+        ry="11.07"
+      />
+
+      <text
+        class="notice-title notice-page-title"
+        x="264.82"
+        y="26.4"
+      >お知らせ</text>
+
+      <text
+        class="notice-title notice-version notice-card-title"
+        x="38.36"
+        y="182.85"
+      ></text>
+
+      <text
+        class="notice-title notice-date notice-card-date"
+        x="37.66"
+        y="242.99"
+      ></text>
+
+      <rect
+        class="notice-beige"
+        x="14.79"
+        y="89.83"
+        width="161.85"
+        height="37.86"
+        rx="18.93"
+        ry="18.93"
+      />
+
+      <text
+        class="notice-title notice-category"
+        x="35.72"
+        y="115.57"
+      ></text>
+
+    </svg>
+
+  </button>
+</template>
+
+  </main>
+
+  <footer>
+    <svg class="footer-svg" viewBox="60 1460 630 80" xmlns="http://www.w3.org/2000/svg">
+
+      <g id="_カレンダー" data-name="カレンダー" role="button" aria-label="カレンダー">
+        <path stroke="#8b6f55" stroke-width="3" stroke-miterlimit="10" fill="none" d="M82.77,1483.38h58.44v36.73c0,3.87-3.14,7.02-7.02,7.02h-44.4c-3.87,0-7.02-3.14-7.02-7.02v-36.73h0Z"/>
+        <path stroke="#8b6f55" stroke-width="3" stroke-miterlimit="10" fill="#8b6f55" d="M85.41,1477.07h53.16c1.46,0,2.64,1.18,2.64,2.64v2.91h-58.44v-2.91c0-1.46,1.18-2.64,2.64-2.64Z"/>
+        <rect stroke="#8b6f55" stroke-miterlimit="10" fill="none" x="89.13" y="1469.38" width="4.46" height="11.2" rx="1.89" ry="1.89"/>
+        <rect stroke="#8b6f55" stroke-miterlimit="10" fill="none" x="102.88" y="1469.38" width="4.46" height="11.2" rx="1.89" ry="1.89"/>
+        <rect stroke="#8b6f55" stroke-miterlimit="10" fill="none" x="130.39" y="1469.38" width="4.46" height="11.2" rx="1.89" ry="1.89"/>
+        <rect stroke="#8b6f55" stroke-miterlimit="10" fill="none" x="116.64" y="1469.38" width="4.46" height="11.2" rx="1.89" ry="1.89"/>
+        <rect fill="#8b6f55" x="91.16" y="1488.57" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+        <rect fill="#8b6f55" x="102.53" y="1488.57" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+        <rect fill="#8b6f55" x="113.91" y="1488.57" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+        <rect fill="#8b6f55" x="125.29" y="1488.57" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+        <rect fill="#8b6f55" x="91.16" y="1501.5" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+        <rect fill="#8b6f55" x="102.53" y="1501.5" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+        <rect fill="#8b6f55" x="113.91" y="1501.5" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+        <rect fill="#8b6f55" x="125.29" y="1501.5" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+        <rect fill="#8b6f55" x="91.16" y="1514.42" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+        <rect fill="#8b6f55" x="102.53" y="1514.42" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+        <rect fill="#8b6f55" x="113.91" y="1514.42" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+        <rect fill="#8b6f55" x="125.29" y="1514.42" width="7.53" height="7.53" rx="1.3" ry="1.3"/>
+      </g>
+
+      <g id="_検索" data-name="検索" role="button" aria-label="検索">
+        <path stroke="#8b6f55" stroke-width="3" stroke-miterlimit="10" fill="none" d="M303.59,1490.25c0,4.52-1.44,8.71-3.88,12.12-1.35,1.89-2.99,3.54-4.88,4.88-3.41,2.43-7.59,3.88-12.11,3.88-11.53,0-20.87-9.35-20.87-20.88s9.34-20.87,20.87-20.87,20.87,9.35,20.87,20.87Z"/>
+        <path fill="#8b6f55" d="M318.7,1525.61l-.62.64c-1.17,1.17-3.09,1.17-4.26,0l-18.99-18.99c1.89-1.35,3.54-2.99,4.88-4.88l18.99,18.99c1.17,1.17,1.17,3.07,0,4.24Z"/>
+      </g>
+
+      <g id="_ホーム" data-name="ホーム" role="button" aria-label="ホーム">
+        <path fill="#8b6f55" d="M494,1503.55h-11.27v23.57h-13.05v-12.97c0-3.12-2.53-5.65-5.65-5.65s-5.65,2.53-5.65,5.65v12.97h-13.05v-23.57h-11.27c-1.86,0-2.8-2.26-1.48-3.58l29.97-29.97c.82-.82,2.15-.82,2.97,0l29.97,29.97c1.32,1.32.39,3.58-1.48,3.58Z"/>
+      </g>
+
+      <g id="_マイページ" data-name="マイページ" role="button" aria-label="マイページ">
+        <circle fill="#8b6f55" cx="645.96" cy="1483.66" r="14.28"/>
+        <path fill="#8b6f55" d="M667.23,1527.13h-42.54c0-14.48,9.52-26.21,21.26-26.21s21.28,11.73,21.28,26.21Z"/>
+      </g>
+
+    </svg>
+  </footer>
+<!-- 新しいお知らせ投稿ダイアログ -->
+<dialog id="new-notice-dialog">
+  <h2 class="dialog-title">新しいお知らせ</h2>
+
+  <form id="new-notice-form">
+    <div class="form-field">
+      <label for="new-title">タイトル</label>
+      <input id="new-title" type="text" required>
+    </div>
+
+    <div class="form-field">
+      <label for="new-category">カテゴリ</label>
+      <input id="new-category" type="text" required>
+    </div>
+
+    <div class="form-field">
+      <label for="new-date">公開日</label>
+      <input id="new-date" type="date" required>
+    </div>
+
+    <div class="form-field">
+      <label for="new-content">本文</label>
+      <textarea id="new-content" required></textarea>
+    </div>
+
+    <div class="dialog-actions">
+      <button
+        type="button"
+        class="cancel-button"
+        id="cancel-new-notice"
+      >キャンセル</button>
+
+      <button type="submit" id="submit-new-notice">
+        投稿する
+      </button>
+    </div>
+  </form>
+</dialog>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const NS = "http://www.w3.org/2000/svg";
+
+  const SUPABASE_URL = "https://vhzxwnyxgmtgteatgwcj.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_zFptSnTXIBaVQFCeYairJQ_WAx6ZL1L";
+  const ADMIN_USER_ID = "e561c056-67c4-4933-87d8-0cc1d93d76b7";
+
+  const supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+  );
+
+  const PAGES = {
+    home: "index.html",
+    search: "kensaku.html",
+    mypage: "mypage.html",
+    calendar: "calendar.html",
+    noticeDetail: "oshirase2.html",
+    noticeNew: "お知らせ投稿.html"
+  };
+
+  function navigate(page) {
+    location.href = PAGES[page];
+  }
+
+  function addHitArea(groupId, label, action) {
+    const group = document.getElementById(groupId);
+    if (!group || group.querySelector(".hit-area")) return;
+
+    let bounds;
+
+    try {
+      bounds = group.getBBox();
+    } catch (e) {
+      return;
+    }
+
+    if (!bounds.width || !bounds.height) return;
+
+    const hit = document.createElementNS(NS, "rect");
+
+    hit.classList.add("hit-area");
+    hit.setAttribute("x", bounds.x - 8);
+    hit.setAttribute("y", bounds.y - 8);
+    hit.setAttribute("width", bounds.width + 16);
+    hit.setAttribute("height", bounds.height + 16);
+    hit.setAttribute("fill", "transparent");
+    hit.setAttribute("pointer-events", "all");
+    hit.setAttribute("role", "button");
+    hit.setAttribute("tabindex", "0");
+    hit.setAttribute("aria-label", label);
+    hit.style.cursor = "pointer";
+
+    hit.addEventListener("click", action);
+
+    hit.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        action();
+      }
+    });
+
+    group.appendChild(hit);
+  }
+
+  // 日付を表示用に整える
+  function formatDate(dateString) {
+    if (!dateString) return "";
+
+    const date = new Date(dateString + "T00:00:00");
+
+    if (Number.isNaN(date.getTime())) return dateString;
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    return `${year}.${month}.${day}`;
+  }
+
+  // お知らせカードを1件生成する
+  function createNoticeCard(notice) {
+    const template = document.getElementById("notice-card-template");
+    const card = template.content.firstElementChild.cloneNode(true);
+
+    const title = card.querySelector(".notice-card-title");
+    const date = card.querySelector(".notice-card-date");
+    const category = card.querySelector(".notice-category");
+
+    title.textContent = notice.title || "";
+    date.textContent = formatDate(notice.published_at);
+    category.textContent = notice.category || "";
+
+    card.setAttribute("aria-label", notice.title || "お知らせ");
+
+    card.addEventListener("click", () => {
+      location.href =
+        `${PAGES.noticeDetail}?id=${encodeURIComponent(notice.id)}`;
+    });
+
+    return card;
+  }
+
+  // 新しいお知らせ投稿ダイアログを開く
+function openNewNoticeDialog() {
+  const dialog = document.getElementById("new-notice-dialog");
+  const form = document.getElementById("new-notice-form");
+  const dateInput = document.getElementById("new-date");
+
+  form.reset();
+  dateInput.value = new Date().toLocaleDateString("sv-SE");
+
+  dialog.showModal();
+}
+
+// キャンセルボタンでダイアログを閉じる
+document
+  .getElementById("cancel-new-notice")
+  .addEventListener("click", () => {
+    document.getElementById("new-notice-dialog").close();
+  });
+
+  // 新しいお知らせをSupabaseに保存
+document
+  .getElementById("new-notice-form")
+  .addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const submitButton = document.getElementById("submit-new-notice");
+
+    const newNotice = {
+      title: document.getElementById("new-title").value.trim(),
+      category: document.getElementById("new-category").value.trim(),
+      published_at: document.getElementById("new-date").value,
+      content: document.getElementById("new-content").value.trim()
+    };
+
+    if (!newNotice.title || !newNotice.category ||
+        !newNotice.published_at || !newNotice.content) {
+      alert("すべての項目を入力してください。");
+      return;
+    }
+
+    submitButton.disabled = true;
+    submitButton.textContent = "投稿中…";
+
+    const { error } = await supabaseClient
+      .from("notices")
+      .insert(newNotice);
+
+    submitButton.disabled = false;
+    submitButton.textContent = "投稿する";
+
+    if (error) {
+      console.error("投稿エラー:", error);
+      alert("投稿できませんでした。管理者としてログインしているか確認してください。");
+      return;
+    }
+
+    document.getElementById("new-notice-dialog").close();
+    document.getElementById("new-notice-form").reset();
+
+    await loadNotices();
+
+    alert("お知らせを投稿しました！");
+  });
+
+  // Supabaseからお知らせ一覧を取得する
+  async function loadNotices() {
+    const noticeList = document.getElementById("notice-list");
+    noticeList.replaceChildren();
+
+    const { data, error } = await supabaseClient
+      .from("notices")
+      .select("id, title, category, published_at, content, created_at")
+      .order("published_at", { ascending: false })
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("お知らせの取得に失敗しました:", error);
+
+      const message = document.createElement("p");
+      message.textContent = "お知らせを読み込めませんでした。";
+      message.style.textAlign = "center";
+      noticeList.appendChild(message);
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      const message = document.createElement("p");
+      message.textContent = "現在、お知らせはありません。";
+      message.style.textAlign = "center";
+      noticeList.appendChild(message);
+      return;
+    }
+
+    data.forEach(notice => {
+      noticeList.appendChild(createNoticeCard(notice));
+    });
+  }
+
+  async function init() {
+    const { data: sessionData, error: sessionError } =
+      await supabaseClient.auth.getSession();
+
+    if (sessionError || !sessionData.session) {
+      location.replace("login.html");
+      return;
+    }
+
+    const userId = sessionData.session.user.id;
+
+    if (userId === ADMIN_USER_ID) {
+      document.getElementById("admin-area").style.display = "block";
+    }
+
+    addHitArea("_メニュー", "メニュー", () => {
+      if (typeof window.openMenu === "function") {
+        window.openMenu();
+      }
+    });
+
+    addHitArea("_カレンダー", "カレンダー", () =>
+      navigate("calendar")
+    );
+
+    addHitArea("_検索", "検索", () =>
+      navigate("search")
+    );
+
+    addHitArea("_ホーム", "ホーム", () =>
+      navigate("home")
+    );
+
+    addHitArea("_マイページ", "マイページ", () =>
+      navigate("mypage")
+    );
+
+  document
+  .getElementById("new-notice-button")
+  .addEventListener("click", openNewNoticeDialog);
+
+await loadNotices();
+  }
+
+  init();
+})();
+</script>
+
+</body>
+</html>
