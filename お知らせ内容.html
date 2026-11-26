@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>お知らせ - meguru</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style>
+* {
+  box-sizing: border-box;
+  font-family: 'Zen Maru Gothic', sans-serif;
+}
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: #f4eee5;
+  color: #8b6f55;
+}
+
+body {
+  display: flex;
+  justify-content: center;
+}
+
+#app {
+  width: 100%;
+  max-width: 600px;
+  min-height: 100vh;
+  padding: 0 12px 40px;
+  position: relative;
+}
+
+/* 上部ボタン */
+.top-controls {
+  position: absolute;
+  z-index: 5;
+  top: 14px;
+  left: 22px;
+  right: 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  pointer-events: none;
+}
+
+.back-button,
+.admin-buttons button {
+  pointer-events: auto;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.back-button {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  background: transparent;
+  color: #8b6f55;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.back-button svg {
+  width: 25px;
+  height: 25px;
+}
+
+.admin-buttons {
+  display: none;
+  gap: 8px;
+}
+
+.admin-buttons button {
+  padding: 7px 15px;
+  border-radius: 18px;
+  background: #8b6f55;
+  color: #fff;
+}
+
+.admin-buttons .delete-button {
+  background: #fff;
+  color: #8b6f55;
+  border: 1px solid #8b6f55;
+}
+
+/* お知らせSVG */
+.notice-wrapper {
+  width: 100%;
+  margin: 0 auto;
+}
+
+#notice-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+#notice-svg text {
+  font-family: 'Zen Maru Gothic', sans-serif;
+}
+
+/* ダイアログ */
+dialog {
+  width: calc(100% - 36px);
+  max-width: 460px;
+  max-height: 85vh;
+  overflow-y: auto;
+  border: none;
+  border-radius: 18px;
+  padding: 25px 22px;
+  background: #fff;
+  color: #8b6f55;
+  box-shadow: 0 5px 25px rgba(80, 60, 40, 0.18);
+}
+
+dialog::backdrop {
+  background: rgba(60, 45, 30, 0.35);
+}
+
+.dialog-title {
+  margin: 0 0 22px;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.form-field {
+  margin-bottom: 16px;
+}
+
+.form-field label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.form-field input,
+.form-field textarea {
+  width: 100%;
+  border: 1px solid #d8cabb;
+  border-radius: 10px;
+  padding: 11px;
+  color: #8b6f55;
+  background: #fdfbf8;
+  font-size: 15px;
+  outline: none;
+}
+
+.form-field textarea {
+  min-height: 180px;
+  resize: vertical;
+  line-height: 1.8;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.dialog-actions button {
+  min-width: 105px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 20px;
+  background: #8b6f55;
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dialog-actions .cancel-button {
+  background: #eee7df;
+  color: #8b6f55;
+}
+
+.dialog-actions .confirm-delete {
+  background: #8b6f55;
+}
+
+#loading-message,
+#error-message {
+  padding: 100px 10px;
+  text-align: center;
+  font-size: 14px;
+}
+
+#error-message {
+  display: none;
+}
+</style>
+</head>
+
+<body>
+<div id="app">
+
+  <div class="top-controls">
+    <!-- 戻るボタン：メニューと同じ位置 -->
+    <button class="back-button" id="back-button" type="button" aria-label="お知らせ一覧へ戻る">
+      <svg viewBox="0 0 30 30" aria-hidden="true">
+        <path d="M19 5 L9 15 L19 25"
+          fill="none"
+          stroke="#8b6f55"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"/>
+      </svg>
+    </button>
+
+    <!-- 管理者のみ表示 -->
+    <div class="admin-buttons" id="admin-buttons">
+      <button id="edit-button" type="button">編集</button>
+      <button id="delete-button" class="delete-button" type="button">削除</button>
+    </div>
+  </div>
+
+  <p id="loading-message">お知らせを読み込んでいます…</p>
+  <p id="error-message">お知らせを読み込めませんでした。</p>
+
+  <main class="notice-wrapper" id="notice-wrapper" hidden>
+
+    <!-- 送ってくれたSVGを埋め込み -->
+    <svg id="notice-svg"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 595.65 1277.33">
+
+      <defs>
+        <style>
+          .cls-1, .cls-2 { font-size: 25px; }
+          .cls-1, .cls-2, .cls-3, .cls-4 {
+            font-family: 'Zen Maru Gothic', sans-serif;
+            font-weight: 700;
+          }
+          .cls-5 { letter-spacing: .25em; }
+          .cls-2, .cls-6, .cls-4 { fill: #8b6f55; }
+          .cls-3 { fill: #f4eee5; font-size: 20px; }
+          .cls-7 { letter-spacing: -.02em; }
+          .cls-8 { letter-spacing: -.04em; }
+          .cls-4 { font-size: 30px; }
+        </style>
+      </defs>
+
+      <g id="_お知らせボックス">
+        <text class="cls-4" transform="translate(250.02 26.4)">
+          <tspan x="0" y="0">お知らせ</tspan>
+        </text>
+      </g>
+
+      <g id="_お知らせ更新日">
+        <text id="notice-date"
+          class="cls-2"
+          transform="translate(22.86 250.29)">
+          <tspan x="0" y="0"></tspan>
+        </text>
+      </g>
+
+      <g id="_タイトル">
+        <text id="notice-title"
+          class="cls-1"
+          transform="translate(22.86 196.3)">
+          <tspan x="0" y="0"></tspan>
+        </text>
+      </g>
+
+      <g id="_概要">
+        <g>
+          <rect class="cls-6"
+            x="0" y="109.43"
+            width="161.85" height="37.86"
+            rx="18.93" ry="18.93"/>
+          <text id="notice-category"
+            class="cls-3"
+            transform="translate(20.92 135.17)">
+            <tspan x="0" y="0"></tspan>
+          </text>
+        </g>
+      </g>
+
+      <g id="_内容">
+        <text id="notice-content"
+          x="22.86"
+          y="330"
+          font-size="22"
+          font-family="'Zen Maru Gothic', sans-serif"
+          font-weight="500"
+          fill="#8b6f55">
+        </text>
+      </g>
+
+    </svg>
+  </main>
+</div>
+
+
+<!-- 編集ダイアログ -->
+<dialog id="edit-dialog">
+  <h2 class="dialog-title">お知らせを編集</h2>
+
+  <form id="edit-form">
+    <div class="form-field">
+      <label for="edit-title">タイトル</label>
+      <input id="edit-title" type="text" required>
+    </div>
+
+    <div class="form-field">
+      <label for="edit-category">カテゴリ</label>
+      <input id="edit-category" type="text" required>
+    </div>
+
+    <div class="form-field">
+      <label for="edit-date">公開日</label>
+      <input id="edit-date" type="date" required>
+    </div>
+
+    <div class="form-field">
+      <label for="edit-content">本文</label>
+      <textarea id="edit-content" required></textarea>
+    </div>
+
+    <div class="dialog-actions">
+      <button type="button" class="cancel-button" id="cancel-edit">キャンセル</button>
+      <button type="submit" id="save-button">保存</button>
+    </div>
+  </form>
+</dialog>
+
+
+<!-- 削除確認ダイアログ -->
+<dialog id="delete-dialog">
+  <h2 class="dialog-title">お知らせを削除</h2>
+  <p style="text-align:center; line-height:1.8;">
+    本当に削除しますか？
+  </p>
+
+  <div class="dialog-actions">
+    <button type="button" class="cancel-button" id="cancel-delete">キャンセル</button>
+    <button type="button" class="confirm-delete" id="confirm-delete">削除</button>
+  </div>
+</dialog>
+
+
+<script>
+/* Supabase設定 */
+const SUPABASE_URL = "https://vhzxwnyxgmtgteatgwcj.supabase.co";
+const SUPABASE_KEY = "sb_publishable_zFptSnTXIBaVQFCeYairJQ_WAx6ZL1L";
+const ADMIN_USER_ID = "e561c056-67c4-4933-87d8-0cc1d93d76b7";
+
+const supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+const NOTICE_LIST_PAGE = "お知らせ.html";
+
+const params = new URLSearchParams(location.search);
+const noticeId = params.get("id");
+
+let currentNotice = null;
+let isAdmin = false;
+
+
+/* 要素取得 */
+const loadingMessage = document.getElementById("loading-message");
+const errorMessage = document.getElementById("error-message");
+const noticeWrapper = document.getElementById("notice-wrapper");
+
+const adminButtons = document.getElementById("admin-buttons");
+
+const editDialog = document.getElementById("edit-dialog");
+const deleteDialog = document.getElementById("delete-dialog");
+
+
+/* 日付表示 */
+function formatDate(dateString) {
+  if (!dateString) return "";
+
+  const date = new Date(dateString + "T00:00:00");
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}.${month}.${day}`;
+}
+
+
+/* SVG本文の改行 */
+function setContentText(content) {
+  const textElement = document.getElementById("notice-content");
+
+  textElement.replaceChildren();
+
+  const maxCharacters = 22;
+  const lines = [];
+
+  const paragraphs = String(content || "").split("\n");
+
+  paragraphs.forEach(paragraph => {
+    if (paragraph === "") {
+      lines.push("");
+      return;
+    }
+
+    let line = "";
+
+    for (const character of paragraph) {
+      if (line.length >= maxCharacters) {
+        lines.push(line);
+        line = "";
+      }
+
+      line += character;
+    }
+
+    if (line) {
+      lines.push(line);
+    }
+  });
+
+  lines.forEach((line, index) => {
+    const tspan = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "tspan"
+    );
+
+    tspan.setAttribute("x", "22.86");
+    tspan.setAttribute("dy", index === 0 ? "0" : "40");
+    tspan.textContent = line;
+
+    textElement.appendChild(tspan);
+  });
+}
+
+
+/* 画面にお知らせを表示 */
+function displayNotice(notice) {
+  document.querySelector("#notice-date tspan").textContent =
+    formatDate(notice.published_at);
+
+  document.querySelector("#notice-title tspan").textContent =
+    notice.title || "";
+
+  document.querySelector("#notice-category tspan").textContent =
+    notice.category || "";
+
+  setContentText(notice.content);
+
+  loadingMessage.style.display = "none";
+  errorMessage.style.display = "none";
+  noticeWrapper.hidden = false;
+}
+
+
+/* お知らせを取得 */
+async function loadNotice() {
+  if (!noticeId) {
+    showError();
+    return;
+  }
+
+  const { data, error } = await supabaseClient
+    .from("notices")
+    .select("id, title, category, published_at, content, created_at, updated_at")
+    .eq("id", noticeId)
+    .single();
+
+  if (error || !data) {
+    console.error(error);
+    showError();
+    return;
+  }
+
+  currentNotice = data;
+  displayNotice(currentNotice);
+}
+
+
+/* エラー表示 */
+function showError() {
+  loadingMessage.style.display = "none";
+  noticeWrapper.hidden = true;
+  errorMessage.style.display = "block";
+}
+
+
+/* 編集ダイアログを開く */
+function openEditDialog() {
+  alert("編集処理を開始");
+
+  if (!currentNotice) {
+    alert("お知らせデータが読み込まれていません");
+    return;
+  }
+
+  if (!isAdmin) {
+    alert("管理者として認識されていません");
+    return;
+  }
+
+  document.getElementById("edit-title").value =
+    currentNotice.title || "";
+
+  document.getElementById("edit-category").value =
+    currentNotice.category || "";
+
+  document.getElementById("edit-date").value =
+    currentNotice.published_at || "";
+
+  document.getElementById("edit-content").value =
+    currentNotice.content || "";
+
+  alert("入力欄の設定完了");
+
+  editDialog.showModal();
+}
+
+
+/* 編集ダイアログを開く */
+function openEditDialog() {
+  if (!currentNotice || !isAdmin) {
+    alert("データまたは管理者情報を確認できません");
+    return;
+  }
+
+  document.getElementById("edit-title").value =
+    currentNotice.title || "";
+
+  document.getElementById("edit-category").value =
+    currentNotice.category || "";
+
+  document.getElementById("edit-date").value =
+    currentNotice.published_at || "";
+
+  document.getElementById("edit-content").value =
+    currentNotice.content || "";
+
+  try {
+    editDialog.showModal();
+  } catch (error) {
+    alert("ダイアログ表示エラー：" + error.message);
+    console.error(error);
+  }
+}
+
+/* 削除 */
+async function deleteNotice() {
+  if (!isAdmin || !currentNotice) return;
+
+  const deleteButton = document.getElementById("confirm-delete");
+  deleteButton.disabled = true;
+  deleteButton.textContent = "削除中…";
+
+  const { error } = await supabaseClient
+    .from("notices")
+    .delete()
+    .eq("id", noticeId);
+
+  if (error) {
+    console.error(error);
+    deleteButton.disabled = false;
+    deleteButton.textContent = "削除";
+    alert("削除できませんでした。もう一度お試しください。");
+    return;
+  }
+
+  location.href = NOTICE_LIST_PAGE;
+}
+
+
+/* 戻る */
+document.getElementById("back-button").addEventListener("click", () => {
+  location.href = NOTICE_LIST_PAGE;
+});
+
+
+/* 編集・削除ボタン */
+document.getElementById("edit-button").addEventListener("click", () => {
+  alert("編集ボタンは反応しているよ");
+  openEditDialog();
+});
+
+document.getElementById("delete-button").addEventListener("click", () => {
+  if (isAdmin) deleteDialog.showModal();
+});
+
+
+/* ダイアログ操作 */
+document.getElementById("cancel-edit").addEventListener("click", () => {
+  editDialog.close();
+});
+
+document.getElementById("cancel-delete").addEventListener("click", () => {
+  deleteDialog.close();
+});
+
+document.getElementById("confirm-delete").addEventListener("click", deleteNotice);
+
+document.getElementById("edit-form").addEventListener("submit", saveNotice);
+
+
+/* 初期化 */
+async function init() {
+  const { data: sessionData, error } =
+    await supabaseClient.auth.getSession();
+
+  if (error || !sessionData.session) {
+    location.href = "login.html";
+    return;
+  }
+
+  const user = sessionData.session.user;
+
+  isAdmin = user.id === ADMIN_USER_ID;
+
+  if (isAdmin) {
+    adminButtons.style.display = "flex";
+  }
+
+  await loadNotice();
+}
+
+init();
+</script>
+
+</body>
+</html>
